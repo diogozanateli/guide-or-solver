@@ -7,6 +7,10 @@ Disponibilidade de Artefatos. Atualizar a cada etapa; não apagar entradas antig
 
 Legenda: `[PREENCHER]` = pendente · **Artigo:** = onde a informação entra no texto.
 
+Os blocos entre `<!-- AUTO:... -->` e `<!-- /AUTO:... -->` são reescritos por
+`scripts/update_diary.py` (o notebook o chama ao fim de cada etapa). **Não edite dentro
+deles**; escreva observações fora dos marcadores.
+
 ---
 
 ## 1. Visão geral do desenho
@@ -74,6 +78,10 @@ Runtime: Ollama 0.40.13 · `OLLAMA_KEEP_ALIVE=-1` (mantém os modelos carregados
 | Carga inicial | ~94 s | `[PREENCHER]` |
 | Data de corte de treinamento | `[PREENCHER — model card]` | `[PREENCHER — model card]` |
 
+<!-- AUTO:modelos -->
+_Ainda não executado._
+<!-- /AUTO:modelos -->
+
 **Parâmetros de geração** (`config/experiment.yaml`):
 
 | Parâmetro | Valor |
@@ -140,12 +148,9 @@ Script: `mining/00_select_repos.py` → `data/repos.csv`.
 
 Resultados:
 
-| Item | Valor |
-|---|---|
-| Data da consulta | `[PREENCHER]` (coluna `queried_at`) |
-| Repositórios avaliados (M) | `[PREENCHER]` |
-| Excluídos por C2 / C3 / C4 / C5 / C6 / C7 / C8 / C9 / C10 | `[PREENCHER]` |
-| Selecionados (N) | `[PREENCHER]` |
+<!-- AUTO:selecao -->
+_Ainda não executado._
+<!-- /AUTO:selecao -->
 
 **Histórico:**
 1. Uma primeira mineração usou uma lista de 24 repositórios escolhida por
@@ -184,13 +189,9 @@ Script: `mining/01_mine.py` → `data/candidates.jsonl`.
 - Todo PR avaliado e o motivo do descarte ficam em `data/mining_log.csv`.
 - Revisão base: primeiro pai do merge commit.
 
-| Item | Valor |
-|---|---|
-| Data da mineração | `[PREENCHER]` |
-| PRs avaliados | `[PREENCHER]` (linhas de `mining_log.csv`) |
-| Descartados por motivo (sem vínculo, sem testes, patch grande, P1, P2…) | `[PREENCHER]` |
-| Candidatos minerados | `[PREENCHER]` |
-| Candidatos por repositório | `[PREENCHER]` |
+<!-- AUTO:mineracao -->
+_Ainda não executado._
+<!-- /AUTO:mineracao -->
 
 ---
 
@@ -204,21 +205,9 @@ Script: `mining/02_validate.py` → `data/instances.jsonl`, `data/exclusions.csv
 - PASS_TO_PASS: passam nas duas versões.
 - 3 execuções por versão; resultados diferentes entre execuções → `testes_instaveis`.
 
-| Motivo de exclusão | Quantidade |
-|---|---|
-| historico_irrecuperavel | `[PREENCHER]` |
-| checkout_falhou | `[PREENCHER]` |
-| ambiente_nao_executavel | `[PREENCHER]` |
-| test_patch_nao_aplica | `[PREENCHER]` |
-| code_patch_nao_aplica | `[PREENCHER]` |
-| testes_nao_executam | `[PREENCHER]` |
-| testes_instaveis | `[PREENCHER]` |
-| sem_fail_to_pass | `[PREENCHER]` |
-| **Instâncias válidas (corpus final)** | `[PREENCHER]` |
-
-Caracterização do corpus (para tabela no artigo): `[PREENCHER — nº de projetos,
-instâncias por projeto, média de arquivos/linhas alteradas no patch humano,
-nº médio de testes FAIL_TO_PASS e PASS_TO_PASS]`
+<!-- AUTO:validacao -->
+_Ainda não executado._
+<!-- /AUTO:validacao -->
 
 ---
 
@@ -243,44 +232,23 @@ nº médio de testes FAIL_TO_PASS e PASS_TO_PASS]`
 |---|---|---|---|---|
 | `[PREENCHER]` | | | | |
 
-Falhas de execução (timeouts, erros do agente, sessões interrompidas):
-`[PREENCHER]`
+Falhas, status de encerramento e violações da regra "sem código" em C2:
 
-Violações da regra "sem código" em C2 (`_contains_code = True`): `[PREENCHER —
-quantidade e tratamento]`
+<!-- AUTO:execucao -->
+_Ainda não executado._
+<!-- /AUTO:execucao -->
+
+Tratamento das falhas e violações: `[PREENCHER]`
 
 ---
 
 ## 10. Resultados
 
-Arquivos: `results/rq1_summary.csv`, `rq2_summary.csv`, `rq3_summary.csv`, `stats.csv`.
+Arquivos: `results/<modelo>/rq1_summary.csv`, `rq2_summary.csv`, `rq3_summary.csv`, `stats.csv`.
 
-### RQ1 — Resolução e eficiência
-
-| Condição | Taxa de resolução | Ações (média) | Tokens resolvedor | Tokens contextualizador | Tokens total | Duração (s) |
-|---|---|---|---|---|---|---|
-| C1 | | | | — | | |
-| C2 | | | | | | |
-| C3 | | | | | | |
-
-McNemar (com correção de Holm): C1×C2 `[p]` · C1×C3 `[p]` · C2×C3 `[p]`
-
-### RQ2 — Localização
-
-| Condição | Nível | Precisão | Revocação | F1 | Acerto exato |
-|---|---|---|---|---|---|
-| C2 | arquivo | | | | |
-| C2 | função | | | | |
-| C3 | arquivo | | | | |
-| C3 | função | | | | |
-
-### RQ3 — Relação com a correção humana
-
-| Condição | CodeBLEU | Volatilidade agente | Volatilidade humano |
-|---|---|---|---|
-| C1 | | | |
-| C2 | | | |
-| C3 | | | |
+<!-- AUTO:resultados -->
+_Ainda não executado._
+<!-- /AUTO:resultados -->
 
 Observações qualitativas (exemplos interessantes de orientações e patches):
 `[PREENCHER — instance_id e o que chamou atenção]`

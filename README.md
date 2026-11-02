@@ -8,6 +8,7 @@ implementação (C3), em *issues* reais de projetos Python *open-source*.
 
 ```
 DIARIO_EXPERIMENTO.md    # registro de decisões, ambiente e resultados (para a escrita)
+scripts/update_diary.py  # preenche os blocos AUTO do diário a partir de data/ e results/
 config/experiment.yaml   # TODOS os parâmetros fixados antes da coleta
 prompts/                 # prompts versionados (solver e contextualizadores)
 common/                  # utilitários compartilhados (config, git, testes)
