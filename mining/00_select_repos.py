@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import base64
 import csv
+import json
 import re
 import sys
 from datetime import datetime, timezone
@@ -105,8 +106,10 @@ def evaluate(item: dict, cfg: dict) -> str | None:
 def main() -> None:
     cfg = load_config()
     sel = {**cfg["selection"], "since": cfg["mining"]["since"], "until": cfg["mining"]["until"]}
+    criteria = json.loads(json.dumps(sel))  # cópia dos critérios, antes de campos internos
     with (ROOT / sel["exclude_file"]).open() as f:
         sel["_excluded"] = {r["repo"].lower(): r["justification"] for r in csv.DictReader(f)}
+    criteria["excluded_repos"] = sorted(sel["_excluded"])
     queried_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     out = DATA / "repos.csv"
     approved = 0
@@ -126,8 +129,30 @@ def main() -> None:
                         status, reason or "", detail, queried_at])
             f.flush()
             print(f"[{'+' if reason is None else '-'}] {item['full_name']} {reason or ''}")
+    # Critérios usados nesta seleção: permite detectar seleções desatualizadas.
+    (DATA / "repos_criteria.json").write_text(json.dumps(
+        {"queried_at": queried_at, "criteria": criteria}, indent=1, ensure_ascii=False))
     print(f"{approved} repositórios selecionados → {out}")
 
 
+def current_criteria() -> dict:
+    """Critérios atuais (experiment.yaml + exclusões manuais), no mesmo formato gravado."""
+    cfg = load_config()
+    sel = {**cfg["selection"], "since": cfg["mining"]["since"], "until": cfg["mining"]["until"]}
+    crit = json.loads(json.dumps(sel))
+    with (ROOT / sel["exclude_file"]).open() as f:
+        crit["excluded_repos"] = sorted(r["repo"].lower() for r in csv.DictReader(f))
+    return crit
+
+
+def is_up_to_date() -> bool:
+    path = DATA / "repos_criteria.json"
+    if not (DATA / "repos.csv").exists() or not path.exists():
+        return False
+    return json.loads(path.read_text())["criteria"] == current_criteria()
+
+
 if __name__ == "__main__":
+    if "--check" in sys.argv:  # sai com 0 se a seleção existente usa os critérios atuais
+        sys.exit(0 if is_up_to_date() else 1)
     main()

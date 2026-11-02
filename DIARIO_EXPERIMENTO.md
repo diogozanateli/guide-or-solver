@@ -65,9 +65,9 @@ Runtime: Ollama 0.40.13 · `OLLAMA_KEEP_ALIVE=-1` (mantém os modelos carregados
 |---|---|---|
 | Tag Ollama | `qwen2.5-coder:7b` | `deepseek-coder-v2:16b` |
 | Licença | Apache 2.0 | DeepSeek License `[PREENCHER — confirmar]` |
-| Digest (ID Ollama) | `dae161e27b0e` | `[PREENCHER]` |
+| Digest (ID Ollama) | `dae161e27b0e` | `63fb193b3a9b` |
 | Arquitetura / parâmetros | qwen2 / 7.6B (denso) | `[PREENCHER]` / 16B MoE, ~2.4B ativos `[confirmar]` |
-| Quantização | Q4_K_M (4.7 GB em disco; 6.6 GB na GPU) | `[PREENCHER]` |
+| Quantização | Q4_K_M (4.7 GB em disco; 6.6 GB na GPU) | `[PREENCHER]` (8.9 GB em disco) |
 | Contexto máximo do modelo | 32768 | `[PREENCHER]` |
 | Execução | 100% GPU | `[PREENCHER]` |
 | Velocidade medida | ~32 tokens/s | `[PREENCHER]` |
@@ -321,6 +321,8 @@ Observações qualitativas (exemplos interessantes de orientações e patches):
 | 2026-11-02 | Setup | Servidor Ollama iniciado em segundo plano pelo script não respondia | Reiniciado com `subprocess.Popen(..., start_new_session=True)` |
 | 2026-11-02 | Git | Push do Kaggle negado (403) | Token fine-grained sem permissão *Contents: Read and write*; corrigido |
 | 2026-11-02 | Mineração | Lista inicial de repositórios sem critério reprodutível | Criado `00_select_repos.py` (critérios C1–C6) |
+| `[PREENCHER]` | Mineração | Primeira versão dos critérios aprovou coleções, repositórios de *skills* para agentes e projetos com dependências de ML | Adicionados C7–C10 (criação < 2023, ≥ 20 arquivos de teste, sem dependências pesadas, exclusão manual) e P1–P2 (PRs de bots/IA); corte reduzido para 20 repositórios e 10 PRs por repositório |
+| `[PREENCHER]` | Kaggle | Notebook executado com *Save & Run All* reaproveitou o `data/repos.csv` antigo (C1–C6) e falhou por falta da coluna `created_at` | `00_select_repos.py` grava `data/repos_criteria.json`; o notebook refaz a seleção (e apaga candidatos/instâncias dependentes) quando os critérios mudam |
 | `[PREENCHER]` | | | |
 
 ---
