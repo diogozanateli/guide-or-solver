@@ -3,7 +3,8 @@
 Grava, por execução: trajetória, patch, orientação, tokens, ações e duração.
 Retoma automaticamente execuções já concluídas (checkpoint por arquivo).
 
-Uso: python runner/run_condition.py [--limit N] [--conditions C1 C2 C3]
+Uso: python runner/run_condition.py --model qwen2.5-coder:7b [--limit N] [--conditions C1 C2 C3]
+Resultados em results/<modelo>/<instancia>/.
 """
 
 from __future__ import annotations
@@ -16,8 +17,12 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.utils import (DATA, RESULTS, ROOT, WORK, fresh_checkout, git_diff,  # noqa: E402
-                          load_config, read_jsonl, setup_venv)
+from common.utils import (DATA, ROOT, WORK, fresh_checkout, git_diff,  # noqa: E402
+                          load_config, model_results_dir, read_jsonl, selected_model,
+                          setup_venv)
+
+MODEL = selected_model()
+RESULTS = model_results_dir()
 
 # API do mini-swe-agent — confira a versão instalada caso os nomes mudem.
 from minisweagent.agents.default import DefaultAgent  # noqa: E402
@@ -47,11 +52,11 @@ class Counter:
 
 
 def make_model(cfg: dict) -> LitellmModel:
-    m = cfg["model"]
+    g = cfg["generation"]
     return LitellmModel(
-        model_name=m["name"],
-        model_kwargs={"api_base": m["api_base"], "temperature": m["temperature"],
-                      "seed": m["seed"], "num_ctx": m["num_ctx"]},
+        model_name=MODEL["name"],
+        model_kwargs={"api_base": g["api_base"], "temperature": g["temperature"],
+                      "seed": g["seed"], "num_ctx": g["num_ctx"]},
         cost_tracking="ignore_errors",
     )
 
@@ -113,10 +118,12 @@ def format_guidance(g: dict) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--model", help="modelo de config/experiment.yaml (padrão: o primeiro)")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--conditions", nargs="+")
     args = ap.parse_args()
     cfg = load_config()
+    print(f"Modelo: {MODEL['name']} → {RESULTS}")
     solver_prompt = (ROOT / "prompts" / "solver.md").read_text()
     instances = read_jsonl(DATA / "instances.jsonl")[: args.limit]
 

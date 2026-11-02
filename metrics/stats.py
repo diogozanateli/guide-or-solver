@@ -1,5 +1,6 @@
 """Comparações pareadas entre condições: McNemar (resolução) com correção de Holm
-e IC 95% por bootstrap das instâncias para as diferenças das demais métricas."""
+e IC 95% por bootstrap das instâncias para as diferenças das demais métricas.
+Uso: python metrics/stats.py --model <modelo>"""
 
 from __future__ import annotations
 
@@ -13,7 +14,9 @@ from statsmodels.stats.contingency_tables import mcnemar
 from statsmodels.stats.multitest import multipletests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.utils import RESULTS  # noqa: E402
+from common.utils import model_results_dir  # noqa: E402
+
+RESULTS = model_results_dir()
 
 PAIRS = list(itertools.combinations(["C1", "C2", "C3"], 2))
 

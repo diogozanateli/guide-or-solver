@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import shutil
 import subprocess
@@ -17,6 +18,34 @@ WORK = ROOT / "work"
 
 def load_config() -> dict:
     return yaml.safe_load((ROOT / "config" / "experiment.yaml").read_text())
+
+
+def model_slug(name: str) -> str:
+    """'ollama/qwen2.5-coder:7b' -> 'qwen2.5-coder_7b' (nome de pasta)."""
+    return name.split("/", 1)[-1].replace(":", "_").replace("/", "_")
+
+
+def selected_model() -> dict:
+    """Modelo escolhido via --model (nome completo, slug ou nome sem 'ollama/').
+    Sem --model, usa o primeiro da lista em config/experiment.yaml."""
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("--model")
+    arg = ap.parse_known_args()[0].model
+    models = load_config()["models"]
+    if not arg:
+        return models[0]
+    for m in models:
+        if arg in (m["name"], model_slug(m["name"]), m["name"].split("/", 1)[-1]):
+            return m
+    raise SystemExit(f"Modelo '{arg}' não está em config/experiment.yaml: "
+                     f"{[m['name'] for m in models]}")
+
+
+def model_results_dir() -> Path:
+    """results/<slug-do-modelo>/ — um diretório por modelo."""
+    d = RESULTS / model_slug(selected_model()["name"])
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
 def read_jsonl(path: Path) -> list[dict]:

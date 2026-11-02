@@ -1,5 +1,6 @@
 """RQ2: precisão, revocação, F1 e acerto exato da localização (arquivo e função)
-indicada nas orientações (C2 e C3) em relação ao patch humano. Média macro."""
+indicada nas orientações (C2 e C3) em relação ao patch humano. Média macro.
+Uso: python metrics/rq2.py --model <modelo>"""
 
 from __future__ import annotations
 
@@ -10,8 +11,10 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.utils import DATA, RESULTS, WORK, fresh_checkout, patch_files, read_jsonl  # noqa: E402
+from common.utils import DATA, WORK, fresh_checkout, model_results_dir, patch_files, read_jsonl  # noqa: E402
 from metrics.functions import changed_functions  # noqa: E402
+
+RESULTS = model_results_dir()
 
 
 def prf(pred: set, ref: set) -> dict:

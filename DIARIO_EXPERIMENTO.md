@@ -51,19 +51,28 @@ custo computacional zero (ver Seção 3.1 do artigo).
 
 **Artigo:** Seção 3.1; diretriz *Report Model Version, Configuration*.
 
-| Item | Valor |
-|---|---|
-| Runtime | Ollama 0.40.13 |
-| Modelo | `qwen2.5-coder:7b` (pesos abertos, Apache 2.0) |
-| Digest (ID Ollama) | `dae161e27b0e` |
-| Arquitetura / parâmetros | qwen2 / 7.6B |
-| Quantização | Q4_K_M (4.7 GB em disco; 6.6 GB carregado na GPU) |
-| Contexto máximo do modelo | 32768 |
-| Capacidades reportadas | completion, tools, insert |
-| Execução | 100% GPU (verificado com `ollama ps`) |
-| Velocidade medida | ~32 tokens/s de geração (prompt curto, T4) |
-| Carga inicial | ~94 s na primeira chamada (carregamento do modelo) |
-| `OLLAMA_KEEP_ALIVE` | `-1` (mantém o modelo carregado na GPU) |
+**Decisão (2026-11-02):** dois modelos de pesos abertos, de famílias diferentes,
+executados sobre o mesmo corpus e as mesmas três condições. Gemini foi
+considerado e descartado: é proprietário (contradiz execução local e sem API paga
+da Seção 3.1), o plano gratuito tem limites de requisição incompatíveis com
+agentes e a data de corte mais recente reduziria o período de mineração. Variantes
+`deepseek-r1` foram descartadas por serem destilações sobre Qwen/Llama.
+Resultados separados em `results/<modelo>/`.
+
+Runtime: Ollama 0.40.13 · `OLLAMA_KEEP_ALIVE=-1` (mantém os modelos carregados).
+
+| Item | Qwen2.5-Coder 7B | DeepSeek-Coder-V2 16B (Lite) |
+|---|---|---|
+| Tag Ollama | `qwen2.5-coder:7b` | `deepseek-coder-v2:16b` |
+| Licença | Apache 2.0 | DeepSeek License `[PREENCHER — confirmar]` |
+| Digest (ID Ollama) | `dae161e27b0e` | `[PREENCHER]` |
+| Arquitetura / parâmetros | qwen2 / 7.6B (denso) | `[PREENCHER]` / 16B MoE, ~2.4B ativos `[confirmar]` |
+| Quantização | Q4_K_M (4.7 GB em disco; 6.6 GB na GPU) | `[PREENCHER]` |
+| Contexto máximo do modelo | 32768 | `[PREENCHER]` |
+| Execução | 100% GPU | `[PREENCHER]` |
+| Velocidade medida | ~32 tokens/s | `[PREENCHER]` |
+| Carga inicial | ~94 s | `[PREENCHER]` |
+| Data de corte de treinamento | `[PREENCHER — model card]` | `[PREENCHER — model card]` |
 
 **Parâmetros de geração** (`config/experiment.yaml`):
 
@@ -83,8 +92,9 @@ custo computacional zero (ver Seção 3.1 do artigo).
 | codebleu | 0.7.0 |
 | demais | ver `pip freeze` em `results/environment.txt` `[PREENCHER]` |
 
-**Data de corte de treinamento do modelo:** `[PREENCHER — confirmar na model card]`.
-Período de mineração começa em 2025-01-01 para mitigar contaminação.
+O período de mineração começa em 2025-01-01, depois da data de corte de ambos os
+modelos (lançados em 2024), para mitigar contaminação. Confirmar as datas nas
+model cards antes de citar.
 
 ---
 
@@ -116,13 +126,17 @@ Script: `mining/00_select_repos.py` → `data/repos.csv`.
 
 | Critério | Regra |
 |---|---|
+| C10 | Não consta em `config/excluded_repos.csv` (exclusão manual com justificativa) |
 | C1 | Linguagem principal Python, ≥ 1.000 estrelas, não fork, não arquivado, atividade desde 2025-01-01 (busca do GitHub ordenada por estrelas; máx. 1.000 resultados) |
+| C7 | Criado antes de 2023-01-01 |
 | C2 | Tamanho ≤ 200 MB |
 | C3 | `pyproject.toml`, `setup.py` ou `setup.cfg` na raiz |
+| C8 | ≥ 20 arquivos de teste (`test_*.py` ou `*_test.py`) |
 | C4 | Usa pytest (configuração, `conftest.py` ou dependência declarada) |
 | C5 | Sem extensões compiladas (.c, .cpp, .pyx, .rs, Cargo.toml, ext_modules) |
+| C9 | Sem dependências pesadas de ML/GPU (torch, tensorflow, jax, transformers, onnxruntime, etc.) |
 | C6 | ≥ 10 PRs mesclados vinculados a issues entre 2025-01-01 e 2026-10-31 |
-| Corte | Primeiros 40 aprovados por número de estrelas |
+| Corte | Primeiros **20** aprovados por número de estrelas |
 
 Resultados:
 
@@ -130,12 +144,24 @@ Resultados:
 |---|---|
 | Data da consulta | `[PREENCHER]` (coluna `queried_at`) |
 | Repositórios avaliados (M) | `[PREENCHER]` |
-| Excluídos por C2 / C3 / C4 / C5 / C6 | `[PREENCHER]` |
+| Excluídos por C2 / C3 / C4 / C5 / C6 / C7 / C8 / C9 / C10 | `[PREENCHER]` |
 | Selecionados (N) | `[PREENCHER]` |
 
-**Histórico:** uma primeira mineração usou uma lista de 24 repositórios escolhida por
-conveniência (26 candidatos). Ela foi **descartada** em favor da seleção reprodutível
-acima. Não citar no artigo como resultado; apenas como decisão de desenho, se útil.
+**Histórico:**
+1. Uma primeira mineração usou uma lista de 24 repositórios escolhida por
+   conveniência (26 candidatos). **Descartada** em favor de critérios reprodutíveis.
+2. A primeira versão dos critérios (C1–C6, 40 repositórios) aprovou coleções
+   educacionais (TheAlgorithms/Python), repositórios de *skills*/prompts para agentes
+   (spec-kit, BMAD-METHOD, academic-research-skills, Agent-Reach etc.), projetos
+   criados em 2025–2026 e projetos com dependências pesadas de ML (ComfyUI,
+   LlamaFactory, keras, ultralytics, gradio). A mineração foi interrompida e os
+   candidatos descartados. Foram adicionados C7–C10 e reduzido o corte para 20
+   repositórios.
+
+**Justificativa de C7 (para o artigo):** repositórios criados antes de 2023 têm
+histórico de manutenção anterior à popularização de assistentes de código, o que
+favorece projetos estabelecidos e reduz a proporção de projetos cujo
+desenvolvimento é majoritariamente feito por agentes.
 
 ---
 
@@ -148,12 +174,21 @@ Script: `mining/01_mine.py` → `data/candidates.jsonl`.
 - Período: 2025-01-01 a 2026-10-31 (PRs mesclados).
 - Vínculo PR → issue: texto do PR com "fixes/closes/resolves #N".
 - Filtros: issue com texto; PR altera código e testes; até 3 arquivos de código
-  (`max_code_files`); até 30 candidatos por repositório (`max_candidates_per_repo`).
+  (`max_code_files`); até **10** candidatos por repositório (`max_candidates_per_repo`).
+- **P1:** autor do PR (ou de algum commit) não é bot nem agente de IA conhecido
+  (`[bot]`, Copilot, copilot-swe-agent, devin-ai-integration, google-labs-jules,
+  openhands-agent, etc.).
+- **P2:** título, descrição e mensagens de commit sem marcas de geração por IA
+  ("Generated with Claude Code", `Co-authored-by: Claude/Copilot/Cursor/...`,
+  "Copilot agent", "OpenHands", etc.).
+- Todo PR avaliado e o motivo do descarte ficam em `data/mining_log.csv`.
 - Revisão base: primeiro pai do merge commit.
 
 | Item | Valor |
 |---|---|
 | Data da mineração | `[PREENCHER]` |
+| PRs avaliados | `[PREENCHER]` (linhas de `mining_log.csv`) |
+| Descartados por motivo (sem vínculo, sem testes, patch grande, P1, P2…) | `[PREENCHER]` |
 | Candidatos minerados | `[PREENCHER]` |
 | Candidatos por repositório | `[PREENCHER]` |
 
@@ -261,12 +296,15 @@ Observações qualitativas (exemplos interessantes de orientações e patches):
   repositórios não estejam no treinamento do modelo.
 - **Resolvedor como substituto humano:** os ganhos de C2/C3 indicam utilidade da
   orientação para um agente, não necessariamente para desenvolvedores.
-- **Modelo único de 7B quantizado:** resultados podem não valer para modelos maiores
-  ou proprietários.
+- **Modelos:** dois modelos abertos, pequenos (7B denso e 16B MoE) e quantizados;
+  resultados podem não valer para modelos maiores ou proprietários.
 - **Seleção de repositórios:** favorece projetos Python populares, maduros e sem
   código nativo.
 - **Testes como oráculo:** patches podem passar nos testes sem estarem corretos
   (validação humana `[PREENCHER — se for feita]`).
+- **Autoria humana da correção de referência:** P1/P2 removem PRs de bots e com
+  marcas explícitas de IA, mas não detectam uso não declarado de assistentes; a
+  "correção humana" pode ter sido produzida com apoio de LLMs.
 - **CodeBLEU:** similaridade com a referência não implica equivalência funcional.
 - **Isolamento por `venv` e não por contêiner:** dependências do sistema
   compartilhadas entre instâncias.

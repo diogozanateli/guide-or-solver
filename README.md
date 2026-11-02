@@ -39,11 +39,13 @@ Em um notebook com GPU (T4) e Internet ativada:
 !git clone https://github.com/<usuario>/guide-or-solver.git
 %cd guide-or-solver
 !bash kaggle/setup.sh
-!python runner/run_condition.py --limit 5      # piloto
+!python runner/run_condition.py --model qwen2.5-coder:7b --limit 5      # piloto
+!python runner/run_condition.py --model deepseek-coder-v2:16b --limit 5
 ```
 
-Os resultados são gravados em `results/` com checkpoint por execução; ao fim da
-sessão, salve `results/` como *Kaggle Dataset* ou faça `git push`.
+Os resultados de cada modelo ficam em `results/<modelo>/`, com checkpoint por
+execução. Avaliação e métricas também recebem `--model` (padrão: o primeiro modelo
+de `config/experiment.yaml`). Ao fim da sessão, faça `git push` de `results/`.
 
 ## Reprodutibilidade
 

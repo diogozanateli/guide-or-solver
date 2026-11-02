@@ -3,12 +3,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-MODEL=$(python -c "import yaml;print(yaml.safe_load(open('config/experiment.yaml'))['model']['name'].split('/',1)[1])")
+MODELS=$(python -c "import yaml;print(' '.join(m['name'].split('/',1)[1] for m in yaml.safe_load(open('config/experiment.yaml'))['models']))")
 
 command -v ollama >/dev/null || (curl -fsSL https://ollama.com/install.sh | sh)
-nohup ollama serve > ollama.log 2>&1 &
+pgrep -x ollama >/dev/null || (OLLAMA_KEEP_ALIVE=-1 setsid nohup ollama serve > ollama.log 2>&1 &)
 sleep 5
-ollama pull "$MODEL"
+for M in $MODELS; do ollama pull "$M"; done
 
 pip install -q -r requirements.txt pytest-json-report
 
@@ -16,8 +16,8 @@ mkdir -p results
 {
   echo "date: $(date -u)"
   echo "ollama: $(ollama --version)"
-  ollama show "$MODEL"
-  ollama list | grep "${MODEL%%:*}"
+  ollama list
+  for M in $MODELS; do echo "== $M"; ollama show "$M"; done
   nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
   lscpu | grep -E 'Model name|^CPU\(s\)'
   free -h | head -2

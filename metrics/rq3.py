@@ -1,5 +1,6 @@
 """RQ3: CodeBLEU entre métodos alterados pelo agente e pelo humano, e
-volatilidade (linhas adicionadas + removidas) de cada patch."""
+volatilidade (linhas adicionadas + removidas) de cada patch.
+Uso: python metrics/rq3.py --model <modelo>"""
 
 from __future__ import annotations
 
@@ -12,9 +13,11 @@ import pandas as pd
 from codebleu import calc_codebleu
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.utils import (DATA, RESULTS, WORK, apply_patch, fresh_checkout,  # noqa: E402
-                          patch_files, read_jsonl, split_patch)
+from common.utils import (DATA, WORK, apply_patch, fresh_checkout,  # noqa: E402
+                          model_results_dir, patch_files, read_jsonl, split_patch)
 from metrics.functions import changed_functions, function_spans, module_name  # noqa: E402
+
+RESULTS = model_results_dir()
 
 
 def volatility(diff: str) -> int:

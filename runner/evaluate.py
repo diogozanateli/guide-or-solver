@@ -2,6 +2,7 @@
 classifica a execução como resolvida (F2P todos passam e P2P sem regressão).
 
 Saída: results/evaluation.jsonl
+Uso: python runner/evaluate.py --model <modelo>   (results/<modelo>/evaluation.jsonl)
 """
 
 from __future__ import annotations
@@ -11,8 +12,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.utils import (DATA, RESULTS, WORK, append_jsonl, apply_patch, fresh_checkout,  # noqa: E402
-                          read_jsonl, run_tests, setup_venv, split_patch)
+from common.utils import (DATA, WORK, append_jsonl, apply_patch, fresh_checkout,  # noqa: E402
+                          model_results_dir, read_jsonl, run_tests, setup_venv, split_patch)
+
+RESULTS = model_results_dir()
 
 
 def main() -> None:

@@ -1,4 +1,5 @@
-"""RQ1: taxa de resolução, ações e tokens por condição."""
+"""RQ1: taxa de resolução, ações e tokens por condição.
+Uso: python metrics/rq1.py --model <modelo>"""
 
 from __future__ import annotations
 
@@ -9,7 +10,9 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.utils import RESULTS, read_jsonl  # noqa: E402
+from common.utils import model_results_dir, read_jsonl  # noqa: E402
+
+RESULTS = model_results_dir()
 
 
 def main() -> None:

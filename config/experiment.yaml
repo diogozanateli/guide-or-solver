@@ -4,21 +4,30 @@ selection:                     # critérios de 00_select_repos.py → data/repos
   min_stars: 1000
   max_size_mb: 200
   min_linked_prs: 10           # PRs mesclados vinculados a issues no período
-  max_repos: 40                # aprovados, em ordem decrescente de estrelas
+  created_before: "2023-01-01" # C7: projetos estabelecidos antes da popularização de agentes
+  min_test_files: 20           # C8: arquivos test_*.py / *_test.py
+  heavy_deps:                  # C9: dependências pesadas de ML/GPU
+    [torch, tensorflow, jax, jaxlib, paddlepaddle, onnxruntime, cupy, triton,
+     nvidia-, transformers, vllm, xformers]
+  exclude_file: "config/excluded_repos.csv"   # C10: exclusões manuais justificadas
+  max_repos: 20                # aprovados, em ordem decrescente de estrelas
 
 mining:
   since: "2025-01-01"          # posterior ao corte de treinamento do modelo
   until: "2026-10-31"
   max_code_files: 3            # patch humano com até N arquivos de código
-  max_candidates_per_repo: 30
+  max_candidates_per_repo: 10
 
 validation:
   repeats: 3                   # execuções por versão para descartar testes flaky
   install_timeout_s: 900
   test_timeout_s: 900
 
-model:
-  name: "ollama/qwen2.5-coder:7b"
+models:                        # cada modelo roda C1, C2 e C3 sobre o mesmo corpus
+  - name: "ollama/qwen2.5-coder:7b"
+  - name: "ollama/deepseek-coder-v2:16b"
+
+generation:                    # parâmetros comuns a todos os modelos
   api_base: "http://localhost:11434"
   temperature: 0.0
   seed: 42
