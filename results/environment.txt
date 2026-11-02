@@ -1,0 +1,62 @@
+date: Mon Nov  2 08:43:17 PM UTC 2026
+ollama: ollama version is 0.40.13
+NAME                     ID              SIZE      MODIFIED           
+deepseek-coder-v2:16b    63fb193b3a9b    8.9 GB    19 seconds ago        
+qwen2.5-coder:7b         dae161e27b0e    4.7 GB    About a minute ago    
+== qwen2.5-coder:7b
+  Model
+    architecture        qwen2          
+    parameters          7.6B           
+    context length      32768          
+    embedding length    3584           
+    quantization        Q4_K_M         
+    template source     go_template    
+
+  Capabilities
+    completion    
+    tools         
+    insert        
+
+  System
+    You are Qwen, created by Alibaba Cloud. You are a helpful assistant.    
+
+  License
+    Apache License               
+    Version 2.0, January 2004    
+    ...                          
+
+== deepseek-coder-v2:16b
+  Model
+    architecture        deepseek2      
+    parameters          15.7B          
+    context length      163840         
+    embedding length    2048           
+    quantization        Q4_0           
+    template source     go_template    
+
+  Capabilities
+    completion    
+    insert        
+
+  Parameters
+    stop    "User:"         
+    stop    "Assistant:"    
+
+  License
+    DEEPSEEK LICENSE AGREEMENT      
+    Version 1.0, 23 October 2023    
+    ...                             
+
+name, memory.total [MiB], driver_version
+Tesla T4, 15360 MiB, 580.178.04
+Tesla T4, 15360 MiB, 580.178.04
+CPU(s):                                  4
+Model name:                              Intel(R) Xeon(R) CPU @ 2.00GHz
+               total        used        free      shared  buff/cache   available
+Mem:            31Gi       1.4Gi       579Mi       1.3Mi        29Gi        29Gi
+PRETTY_NAME="Ubuntu 24.04.4 LTS"
+NAME="Ubuntu"
+Python 3.13.16
+codebleu==0.7.0
+litellm==1.93.2
+mini-swe-agent==2.4.6
