@@ -1,25 +1,34 @@
 """Executa as condições C1, C2 e C3 para cada instância (Kaggle, GPU).
 
-Grava, por execução: trajetória, patch, orientação, tokens, ações e duração.
-Retoma automaticamente execuções já concluídas (checkpoint por arquivo).
+  C1 — resolvedor recebe a issue original (Default do CodeScout)
+  C2 — resolvedor recebe a especificação aumentada pelo CodeScout SEM a subseção
+       "Implementation Suggestions" (orientação descritiva)
+  C3 — resolvedor recebe a especificação aumentada completa do CodeScout
+
+Como no CodeScout, a especificação aumentada SUBSTITUI a issue original e o
+resolvedor usa o prompt padrão do mini-swe-agent. C2 e C3 derivam da mesma
+execução do CodeScout (results/<modelo>/<instancia>/codescout.json).
+
+Grava, por execução: trajetória, patch, tokens, ações e duração. Retoma
+automaticamente execuções já concluídas (checkpoint por arquivo).
 
 Uso: python runner/run_condition.py --model qwen2.5-coder:7b [--limit N] [--conditions C1 C2 C3]
-Resultados em results/<modelo>/<instancia>/.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 import time
 from pathlib import Path
 
+import yaml
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.utils import (DATA, ROOT, WORK, fresh_checkout, git_diff,  # noqa: E402
-                          load_config, model_results_dir, read_jsonl, selected_model,
-                          setup_venv)
+from common.utils import (DATA, WORK, fresh_checkout, git_diff, load_config,  # noqa: E402
+                          model_results_dir, read_jsonl, selected_model, setup_venv)
+from runner.codescout import run_codescout  # noqa: E402
 
 MODEL = selected_model()
 RESULTS = model_results_dir()
@@ -29,22 +38,34 @@ from minisweagent.agents.default import DefaultAgent  # noqa: E402
 from minisweagent.environments.local import LocalEnvironment  # noqa: E402
 from minisweagent.models.litellm_model import LitellmModel  # noqa: E402
 
-CODE_RE = re.compile(r"```|^\s*(def |class |import |from \S+ import )|^[+-]{1}\s", re.M)
+
+def default_agent_config() -> tuple[dict, str]:
+    """Configuração padrão do mini-swe-agent (prompts de sistema/instância etc.)."""
+    try:
+        from minisweagent.config import get_config_path
+        path = Path(get_config_path("default"))
+    except Exception:
+        from minisweagent.config import builtin_config_dir
+        path = Path(builtin_config_dir) / "default.yaml"
+    return yaml.safe_load(path.read_text()), str(path)
 
 
 class Counter:
-    """Acumula tokens reportados pelo Ollama (via LiteLLM) e ações executadas."""
+    """Acumula tokens reportados pelo Ollama (via LiteLLM) e chamadas ao modelo."""
 
     def __init__(self, model: LitellmModel):
-        self.model, self.inp, self.out, self.calls = model, 0, 0, 0
+        self.inp, self.out, self.calls = 0, 0, 0
         original = model.query
 
         def query(messages, **kw):
             resp = original(messages, **kw)
-            usage = (resp.get("extra", {}).get("response", {}) or {}).get("usage", {}) \
-                if isinstance(resp, dict) else {}
-            self.inp += usage.get("prompt_tokens", 0)
-            self.out += usage.get("completion_tokens", 0)
+            extra = resp.get("extra", {}) if isinstance(resp, dict) else {}
+            raw = extra.get("response", {}) or {}
+            usage = raw.get("usage", {}) if isinstance(raw, dict) else getattr(raw, "usage", {}) or {}
+            if not isinstance(usage, dict):
+                usage = getattr(usage, "model_dump", lambda: {})()
+            self.inp += usage.get("prompt_tokens", 0) or 0
+            self.out += usage.get("completion_tokens", 0) or 0
             self.calls += 1
             return resp
 
@@ -61,12 +82,14 @@ def make_model(cfg: dict) -> LitellmModel:
     )
 
 
-def run_agent(cfg: dict, workdir: Path, task: str, step_limit: int) -> dict:
+def run_agent(cfg: dict, workdir: Path, task: str) -> dict:
+    agent_cfg, _ = default_agent_config()
+    agent_kwargs = {**agent_cfg.get("agent", {}), "step_limit": cfg["agent"]["step_limit"]}
     model = make_model(cfg)
     counter = Counter(model)
     env = LocalEnvironment(cwd=str(workdir), timeout=cfg["agent"]["command_timeout_s"],
                            env={"PATH": f"{workdir}/.venv/bin:/usr/local/bin:/usr/bin:/bin"})
-    agent = DefaultAgent(model, env, step_limit=step_limit)
+    agent = DefaultAgent(model, env, **agent_kwargs)
     t0 = time.time()
     try:
         status, output = agent.run(task)
@@ -82,38 +105,27 @@ def run_agent(cfg: dict, workdir: Path, task: str, step_limit: int) -> dict:
 
 
 def issue_text(inst: dict) -> str:
-    return f"# {inst['issue_title']}\n\n{inst['issue_body']}"
+    return f"{inst['issue_title']}\n\n{inst['issue_body']}"
 
 
-def parse_guidance(output: str) -> dict:
-    m = re.search(r"\{.*\}", output or "", re.S)
-    try:
-        return json.loads(m.group(0)) if m else {}
-    except json.JSONDecodeError:
-        return {"raw": output}
-
-
-def contextualize(cfg: dict, inst: dict, kind: str, out_dir: Path) -> dict:
-    path = out_dir / f"guidance_{kind}.json"
+def codescout(cfg: dict, inst: dict, out_dir: Path) -> dict:
+    path = out_dir / "codescout.json"
     if path.exists():
         return json.loads(path.read_text())
-    prompt = (ROOT / "prompts" / f"contextualizer_{kind}.md").read_text()
-    wd = fresh_checkout(inst, WORK / f"{inst['instance_id']}_ctx")
-    setup_venv(wd)
-    res = run_agent(cfg, wd, prompt.replace("{issue}", issue_text(inst)),
-                    cfg["agent"]["contextualizer_step_limit"])
-    guidance = parse_guidance(res["output"])
-    if kind == "desc":
-        text = json.dumps({k: v for k, v in guidance.items()})
-        guidance["_contains_code"] = bool(CODE_RE.search(text))
-    res["guidance"] = guidance
+    wd = fresh_checkout(inst, WORK / f"{inst['instance_id']}_cs")
+    res = run_codescout(wd, issue_text(inst), MODEL["name"], cfg["generation"], cfg["codescout"])
     path.write_text(json.dumps(res, indent=1))
+    print(f"[CodeScout] {inst['instance_id']}: {res['n_targets']} alvos, {res['n_analyzed']} analisados, "
+          f"{res['n_kept']} >= tau, {res['llm_calls']} chamadas, "
+          f"C2 removeu implementação: {res['c2_removed_implementation']}")
     return res
 
 
-def format_guidance(g: dict) -> str:
-    g = {k: v for k, v in g.items() if not k.startswith("_")}
-    return "## Guidance from a previous analysis\n\n```json\n" + json.dumps(g, indent=1) + "\n```"
+def save_agent_config() -> None:
+    path = RESULTS / "agent_config.json"
+    if not path.exists():
+        cfg, src = default_agent_config()
+        path.write_text(json.dumps({"source": src, "config": cfg}, indent=1, default=str))
 
 
 def main() -> None:
@@ -124,7 +136,7 @@ def main() -> None:
     args = ap.parse_args()
     cfg = load_config()
     print(f"Modelo: {MODEL['name']} → {RESULTS}")
-    solver_prompt = (ROOT / "prompts" / "solver.md").read_text()
+    save_agent_config()
     instances = read_jsonl(DATA / "instances.jsonl")[: args.limit]
 
     for inst in instances:
@@ -135,19 +147,23 @@ def main() -> None:
                 target = out_dir / f"{cond}_run{k}.json"
                 if target.exists():
                     continue
-                guidance, ctx = "", None
-                if cond in ("C2", "C3"):
-                    ctx = contextualize(cfg, inst, "desc" if cond == "C2" else "impl", out_dir)
-                    guidance = format_guidance(ctx["guidance"])
-                task = solver_prompt.replace("{issue}", issue_text(inst)).replace("{guidance}", guidance)
+                cs = None
+                if cond == "C1":
+                    task = issue_text(inst)
+                else:
+                    cs = codescout(cfg, inst, out_dir)
+                    task = cs["ps_aug_c2"] if cond == "C2" else cs["ps_aug_c3"]
                 wd = fresh_checkout(inst, WORK / inst["instance_id"])
                 setup_venv(wd)
-                res = run_agent(cfg, wd, task, cfg["agent"]["step_limit"])
+                res = run_agent(cfg, wd, task)
+                res["task"] = task
                 res["patch"] = git_diff(wd)
-                if ctx:
-                    res["contextualizer"] = {k2: ctx[k2] for k2 in
-                                             ("input_tokens", "output_tokens", "actions", "duration_s")}
-                target.write_text(json.dumps(res, indent=1))
+                if cs:  # custo do contextualizador (compartilhado entre C2 e C3)
+                    res["contextualizer"] = {"input_tokens": cs["input_tokens"],
+                                             "output_tokens": cs["output_tokens"],
+                                             "llm_calls": cs["llm_calls"], "actions": 0,
+                                             "duration_s": cs["duration_s"]}
+                target.write_text(json.dumps(res, indent=1, default=str))
                 print(f"[{cond}] {inst['instance_id']} run{k}: {res['status']} "
                       f"{res['actions']} ações, {res['input_tokens']}+{res['output_tokens']} tokens")
 

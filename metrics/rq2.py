@@ -1,5 +1,7 @@
 """RQ2: precisão, revocação, F1 e acerto exato da localização (arquivo e função)
-indicada nas orientações (C2 e C3) em relação ao patch humano. Média macro.
+indicada nas orientações do CodeScout (C2 e C3) em relação ao patch humano. Média macro.
+Arquivos e funções são extraídos das seções Exploration Hints e Fix Hints (High
+Confidence Locations) de cada especificação aumentada (codescout.json → guidance).
 Uso: python metrics/rq2.py --model <modelo>"""
 
 from __future__ import annotations
@@ -32,15 +34,16 @@ def norm_func(name: str) -> str:
 def main() -> None:
     rows = []
     for inst in read_jsonl(DATA / "instances.jsonl"):
+        path = RESULTS / inst["instance_id"] / "codescout.json"
+        if not path.exists():
+            continue
         ref_files = set(patch_files(inst["code_patch"]))
         wd = fresh_checkout(inst, WORK / f"rq2_{inst['instance_id']}")
         sources = {f: (wd / f).read_text() for f in ref_files if (wd / f).exists()}
         ref_funcs = changed_functions(inst["code_patch"], sources)
-        for kind, cond in (("desc", "C2"), ("impl", "C3")):
-            path = RESULTS / inst["instance_id"] / f"guidance_{kind}.json"
-            if not path.exists():
-                continue
-            g = json.loads(path.read_text()).get("guidance", {})
+        guidance = json.loads(path.read_text()).get("guidance", {})
+        for cond in ("C2", "C3"):
+            g = guidance.get(cond, {})
             pred_files = {f.strip().lstrip("./") for f in g.get("files", [])}
             pred_funcs = {norm_func(f) for f in g.get("functions", [])}
             # aceita nomes não totalmente qualificados por sufixo

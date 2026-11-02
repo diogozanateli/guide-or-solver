@@ -191,18 +191,37 @@ def block_execucao() -> str:
             rs = by_cond[cond]
             rows.append([cond, len(rs), sum(1 for r in rs if not r.get("patch", "").strip()),
                          mean(r.get("actions") for r in rs), mean(r.get("duration_s") for r in rs)])
-        guid = list(d.glob("*/guidance_desc.json"))
-        viol = sum(1 for g in guid if json.loads(g.read_text()).get("guidance", {}).get("_contains_code"))
-        parse_fail = sum(1 for g in d.glob("*/guidance_*.json")
-                         if "raw" in json.loads(g.read_text()).get("guidance", {})
-                         or not json.loads(g.read_text()).get("guidance"))
+        cs = [json.loads(g.read_text()) for g in d.glob("*/codescout.json")]
+        cs_rows = [
+            ["Instâncias processadas", len(cs)],
+            ["Alvos identificados (Stage 1, média)", mean(c["n_targets"] for c in cs)],
+            ["Alvos recuperados e analisados (Stage 2, média)", mean(c["n_analyzed"] for c in cs)],
+            ["Análises com relevância >= tau (média)", mean(c["n_kept"] for c in cs)],
+            ["Instâncias sem nenhum alvo >= tau", sum(1 for c in cs if c["n_kept"] == 0)],
+            ["Instâncias com 0 alvos parseados no Stage 1", sum(1 for c in cs if c["n_targets"] == 0)],
+            ["Árvore de arquivos truncada", sum(1 for c in cs if c["file_tree_truncated"])],
+            ["Chamadas ao LLM por instância (média)", mean(c["llm_calls"] for c in cs)],
+            ["Tokens do CodeScout por instância (média)", mean(c["input_tokens"] + c["output_tokens"] for c in cs)],
+            ["Duração do CodeScout por instância (s, média)", mean(c["duration_s"] for c in cs)],
+            ["C2: 'Implementation Suggestions' encontrada e removida", sum(1 for c in cs if c["c2_removed_implementation"])],
+            ["C2: código remanescente fora de Reproduction Steps", sum(1 for c in cs if c["c2_contains_code"])],
+        ] if cs else []
+        scores = [a["relevance"] for c in cs for a in c["analyses"]]
+        valid = [x for x in scores if x is not None]
+        tau = cs[0]["tau"] if cs else None
+        score_rows = [[f"{b}", sum(1 for x in valid if int(x) == b)] for b in range(11)]
+        score_rows.append(["sem nota (formato não seguido)", len(scores) - len(valid)])
+        score_summary = (
+            f"Distribuição das notas de relevância (Stage 2) — {len(scores)} análises; "
+            f"média {mean(valid) or 0:.2f}; {sum(1 for x in valid if x >= tau)} com nota >= tau ({tau}):\n\n"
+            + table(["Nota", "Análises"], score_rows)) if scores else ""
         n_inst = len({f.parent.name for f in runs})
         parts += [f"**{name}** — {n_inst} instâncias com execuções", "",
                   table(["Condição", "Execuções", "Patch vazio", "Ações (média)", "Duração (s, média)"], rows), "",
                   table(["Condição", "Status de encerramento", "Execuções"],
                         [[c, s, n] for (c, s), n in sorted(statuses.items())]), "",
-                  f"- Orientações C2 com código (`_contains_code`): **{viol}** de {len(guid)}\n"
-                  f"- Orientações sem JSON válido: **{parse_fail}**"]
+                  ("CodeScout (contextualizador):\n\n" + table(["Medida", "Valor"], cs_rows))
+                  if cs_rows else "CodeScout: _ainda não executado._", score_summary]
     return "\n\n".join(p for p in parts if p).strip()
 
 

@@ -17,11 +17,12 @@ deles**; escreva observações fora dos marcadores.
 
 - **Objetivo:** verificar se um agente de LLM é mais eficaz como resolvedor
   autônomo de issues ou como contextualizador que orienta a resolução.
-- **Condições** (mesmo agente resolvedor, mesmas instruções-base, mesmos limites):
+- **Condições** (mesmo agente resolvedor, mesma configuração, mesmos limites):
   - **C1 — Autônomo:** recebe apenas o texto original da issue.
-  - **C2 — Orientação descritiva:** contextualizador descreve problema, causa,
-    arquivos e funções, **sem código**.
-  - **C3 — Orientação com implementação:** como C2, mais proposta de implementação.
+  - **C2 — Orientação descritiva:** recebe a especificação aumentada pelo CodeScout
+    **sem** a subseção "Implementation Suggestions".
+  - **C3 — Orientação com implementação:** recebe a especificação aumentada completa
+    (replicação do CodeScout).
 - **RQ1:** efeito das orientações na resolução (taxa de resolução, ações, tokens).
 - **RQ2:** precisão da localização indicada pela orientação (arquivo e função).
 - **RQ3:** relação das soluções com a correção humana (CodeBLEU, volatilidade).
@@ -106,21 +107,64 @@ model cards antes de citar.
 
 ---
 
-## 4. Agentes e prompts
+## 4. Contextualizador (CodeScout) e resolvedor
 
 **Artigo:** Seção 3.2; diretriz *Report System and Prompt Design*.
 
+**Decisão:** o contextualizador é uma **reimplementação do CodeScout** (Suri et al.,
+2026), feita a partir da Seção 4, do Apêndice A (prompts, transcritos literalmente
+em `prompts/`) e do Algoritmo 1. O código original não é público.
+
+| Etapa | Implementação (`runner/codescout.py`) |
+|---|---|
+| Estrutura do repositório | Árvore de arquivos (`git ls-files`) + índice AST de classes e funções para recuperar o código dos alvos |
+| Stage 1 — Exploration Target Identification | Prompt A.1 com a issue e a árvore; 5–10 alvos `target_type`/`target_name`/`reasoning` |
+| Stage 2 — Content Relevance Analysis | Prompt A.2, uma chamada por alvo recuperado; `RELEVANCE X/10` + 4 seções |
+| Filtro | Mantém análises com relevância ≥ **τ = 5** |
+| Stage 3 — Problem Statement Synthesis | Prompt A.3; seções Issue Description, Reproduction Steps, Expected Behavior, Exploration Hints, Fix Hints |
+| Chamadas ao LLM | 2 + nº de alvos recuperados (o artigo relata ≈ 9) |
+
+**Condições:**
+
+| Condição | Tarefa entregue ao resolvedor |
+|---|---|
+| C1 | Issue original (título + corpo) — equivale ao *Default* do CodeScout |
+| C2 | Especificação aumentada **sem** a subseção "Implementation Suggestions" de Fix Hints |
+| C3 | Especificação aumentada completa (replicação do CodeScout) |
+
+**Decisão (opção a):** C2 e C3 vêm da **mesma** execução do CodeScout; C2 é obtida
+removendo a subseção "Implementation Suggestions" (item, sub-itens e blocos de
+código) após a síntese. Assim a única diferença entre C2 e C3 é a sugestão de
+implementação. Verificação adicional: blocos de código fora de "Reproduction Steps"
+que não vêm da issue original são sinalizados (`c2_contains_code`).
+
+**Resolvedor:** mini-swe-agent com a **configuração padrão** do pacote (como no
+artigo), recebendo a issue (C1) ou a especificação aumentada (C2/C3) como tarefa,
+em substituição à issue. Configuração efetiva em `results/<modelo>/agent_config.json`.
+
 | Item | Valor |
 |---|---|
-| Framework | mini-swe-agent 2.4.6 (apenas bash) |
-| Limite de ações — resolvedor | 50 |
-| Limite de ações — contextualizador | 30 |
+| Framework | mini-swe-agent 2.4.6 (apenas bash), configuração padrão |
+| Limite de ações — resolvedor | 50 (o artigo usou o padrão do Mini-SWE-Agent; limite definido por custo computacional) |
 | Timeout por comando | 120 s |
-| Critério de encerramento | `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT` ou limite de ações |
-| Prompts | `prompts/solver.md`, `prompts/contextualizer_desc.md`, `prompts/contextualizer_impl.md` |
-| Formato da orientação | JSON: `problem`, `root_cause`, `files`, `functions`, `change_description` (+ `proposed_implementation` em C3) |
-| Verificação de "sem código" em C2 | filtro automático por regex (`_contains_code`) |
-| Prevenção de vazamento | clone apenas da revisão base (`--depth 1`), sem histórico futuro; o patch humano e os testes FAIL_TO_PASS não são fornecidos ao agente |
+| Prevenção de vazamento | clone apenas da revisão base (`--depth 1`), sem histórico futuro; o patch humano e os testes FAIL_TO_PASS não são fornecidos |
+| Localização para a RQ2 | arquivos e funções citados em Exploration Hints e Fix Hints → High Confidence Locations |
+
+**Lacunas do artigo e escolhas feitas (declarar no artigo):**
+
+- **τ não é informado** no CodeScout; adotado τ = 5 (escala 0–10).
+- O prompt A.1 pede "exactly 5–10 targets", mas o texto (Seção 4.2) cita |T| ≤ 15;
+  seguido o prompt (máximo 10).
+- O grafo de conhecimento é descrito na Seção 4.1, mas o prompt A.1 recebe apenas a
+  árvore de arquivos (`{file_tree}`); o grafo foi usado apenas para recuperar o
+  código dos alvos.
+- Limites de tamanho para caber no contexto de 32k tokens: árvore ≤ 60.000
+  caracteres (removendo primeiro arquivos não-.py, depois testes/docs) e código de
+  cada alvo ≤ 12.000 caracteres. Truncamentos ficam registrados.
+- Se nenhuma análise atinge τ, a síntese recebe a indicação "(no code analysis passed
+  the relevance threshold)"; o artigo não descreve esse caso.
+- O artigo usou modelos maiores (GPT-5-mini, DeepSeek R1, Qwen3 Coder 480B); aqui
+  são modelos abertos de 7B e 16B, quantizados.
 
 Alterações nos prompts após o piloto: `[PREENCHER — data, mudança, motivo]`
 
@@ -274,6 +318,11 @@ Observações qualitativas (exemplos interessantes de orientações e patches):
   marcas explícitas de IA, mas não detectam uso não declarado de assistentes; a
   "correção humana" pode ter sido produzida com apoio de LLMs.
 - **CodeBLEU:** similaridade com a referência não implica equivalência funcional.
+- **Nota de relevância do CodeScout:** é autoavaliada pelo próprio modelo no Stage 2,
+  sem rubrica (como no artigo original), e τ = 5 não vem do artigo. A distribuição
+  das notas depende do modelo (o próprio CodeScout relata isso), então o mesmo τ
+  filtra quantidades diferentes de contexto para Qwen e DeepSeek. Respostas sem nota
+  no formato esperado são descartadas. Distribuição por modelo: seção 9 (automática).
 - **Isolamento por `venv` e não por contêiner:** dependências do sistema
   compartilhadas entre instâncias.
 - `[PREENCHER — novas ameaças observadas]`
@@ -290,6 +339,7 @@ Observações qualitativas (exemplos interessantes de orientações e patches):
 | 2026-11-02 | Git | Push do Kaggle negado (403) | Token fine-grained sem permissão *Contents: Read and write*; corrigido |
 | 2026-11-02 | Mineração | Lista inicial de repositórios sem critério reprodutível | Criado `00_select_repos.py` (critérios C1–C6) |
 | `[PREENCHER]` | Mineração | Primeira versão dos critérios aprovou coleções, repositórios de *skills* para agentes e projetos com dependências de ML | Adicionados C7–C10 (criação < 2023, ≥ 20 arquivos de teste, sem dependências pesadas, exclusão manual) e P1–P2 (PRs de bots/IA); corte reduzido para 20 repositórios e 10 PRs por repositório |
+| `[PREENCHER]` | Desenho | Contextualizador e prompts próprios não seguiam o CodeScout, que é a base de replicação | Reimplementado o CodeScout (prompts do Apêndice A, Algoritmo 1, τ = 5); C2 = saída sem "Implementation Suggestions"; resolvedor com configuração padrão do mini-swe-agent |
 | `[PREENCHER]` | Kaggle | Notebook executado com *Save & Run All* reaproveitou o `data/repos.csv` antigo (C1–C6) e falhou por falta da coluna `created_at` | `00_select_repos.py` grava `data/repos_criteria.json`; o notebook refaz a seleção (e apaga candidatos/instâncias dependentes) quando os critérios mudam |
 | `[PREENCHER]` | | | |
 

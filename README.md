@@ -1,8 +1,9 @@
 # Guide or Solver? — Pacote de Replicação
 
-Experimento que compara um agente de LLM como **resolvedor autônomo** (C1) e como
-**contextualizador** que orienta o resolvedor, sem código (C2) ou com proposta de
-implementação (C3), em *issues* reais de projetos Python *open-source*.
+Experimento que compara um agente de LLM como **resolvedor autônomo** (C1) e
+orientado pelo **CodeScout** (Suri et al., 2026), com a especificação aumentada sem
+sugestões de implementação (C2) ou completa (C3), em *issues* reais de projetos
+Python *open-source*.
 
 ## Estrutura
 
@@ -10,10 +11,11 @@ implementação (C3), em *issues* reais de projetos Python *open-source*.
 DIARIO_EXPERIMENTO.md    # registro de decisões, ambiente e resultados (para a escrita)
 scripts/update_diary.py  # preenche os blocos AUTO do diário a partir de data/ e results/
 config/experiment.yaml   # TODOS os parâmetros fixados antes da coleta
-prompts/                 # prompts versionados (solver e contextualizadores)
+prompts/                 # prompts do CodeScout (Apêndice A de Suri et al., 2026)
 common/                  # utilitários compartilhados (config, git, testes)
 mining/01_mine.py        # minera issues fechadas por PR mesclado
 mining/02_validate.py    # valida FAIL_TO_PASS / PASS_TO_PASS
+runner/codescout.py      # reimplementação do CodeScout (contextualizador)
 runner/run_condition.py  # executa C1, C2, C3 (Kaggle, GPU)
 runner/evaluate.py       # aplica patches e roda os testes (CPU)
 metrics/rq1.py rq2.py rq3.py stats.py

@@ -35,8 +35,13 @@ generation:                    # parâmetros comuns a todos os modelos
 
 agent:
   step_limit: 50               # máximo de ações por execução
-  command_timeout_s: 120
-  contextualizer_step_limit: 30
+  command_timeout_s: 120          # prompts: configuração padrão do mini-swe-agent
+
+codescout:                       # reimplementação de Suri et al. (2026)
+  tau: 5                         # limiar de relevância (nota 0-10 do Stage 2); não informado no artigo
+  max_targets: 10                # Stage 1 pede "exactly 5-10 targets"
+  max_tree_chars: 60000          # limite da árvore de arquivos no prompt do Stage 1
+  max_target_chars: 12000        # limite do código de cada alvo no prompt do Stage 2
 
 conditions: [C1, C2, C3]
 runs_per_condition: 1          # k; aumentar num subconjunto se a cota permitir
