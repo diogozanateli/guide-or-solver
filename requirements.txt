@@ -5,8 +5,7 @@ litellm>=1.40
 uv>=0.4
 pytest>=8.0
 codebleu>=0.7
-tree-sitter>=0.23
-tree-sitter-python>=0.23
+tree-sitter-python
 statsmodels>=0.14
 numpy>=1.26
 pandas>=2.0
