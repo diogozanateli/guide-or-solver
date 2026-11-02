@@ -4,3 +4,4 @@ __pycache__/
 work/
 .env
 results/**/workdir/
+ollama.log
