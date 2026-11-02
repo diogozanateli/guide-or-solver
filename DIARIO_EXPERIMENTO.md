@@ -340,6 +340,7 @@ Observações qualitativas (exemplos interessantes de orientações e patches):
 | 2026-11-02 | Mineração | Lista inicial de repositórios sem critério reprodutível | Criado `00_select_repos.py` (critérios C1–C6) |
 | `[PREENCHER]` | Mineração | Primeira versão dos critérios aprovou coleções, repositórios de *skills* para agentes e projetos com dependências de ML | Adicionados C7–C10 (criação < 2023, ≥ 20 arquivos de teste, sem dependências pesadas, exclusão manual) e P1–P2 (PRs de bots/IA); corte reduzido para 20 repositórios e 10 PRs por repositório |
 | `[PREENCHER]` | Desenho | Contextualizador e prompts próprios não seguiam o CodeScout, que é a base de replicação | Reimplementado o CodeScout (prompts do Apêndice A, Algoritmo 1, τ = 5); C2 = saída sem "Implementation Suggestions"; resolvedor com configuração padrão do mini-swe-agent |
+| `[PREENCHER]` | Mineração | Queda de conexão com a API do GitHub (`RemoteDisconnected`) interrompeu `01_mine.py` durante o `scrapy/scrapy` | `common/github.py` passou a repetir requisições após falhas de conexão/timeout (até 8 tentativas, espera crescente até 300 s); o download de diffs passou a usar a mesma função. A mineração foi retomada do ponto de parada |
 | `[PREENCHER]` | Kaggle | Notebook executado com *Save & Run All* reaproveitou o `data/repos.csv` antigo (C1–C6) e falhou por falta da coluna `created_at` | `00_select_repos.py` grava `data/repos_criteria.json`; o notebook refaz a seleção (e apaga candidatos/instâncias dependentes) quando os critérios mudam |
 | `[PREENCHER]` | | | |
 

@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.github import API, S, get  # noqa: E402
+from common.github import API, get  # noqa: E402
 from common.utils import DATA, append_jsonl, load_config, read_jsonl, split_patch, patch_files  # noqa: E402
 
 FIX_RE = re.compile(r"(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)", re.I)
@@ -116,7 +116,7 @@ def main() -> None:
             if "pull_request" in issue or "title" not in issue or not (issue.get("body") or "").strip():
                 skip("issue_invalida_ou_sem_texto")
                 continue
-            diff = S.get(pr["url"], headers={"Accept": "application/vnd.github.v3.diff"}).text
+            diff = get(pr["url"], headers={"Accept": "application/vnd.github.v3.diff"}).text
             code_patch, test_patch = split_patch(diff)
             code_files = [f for f in patch_files(code_patch) if f.endswith(".py")]
             if not code_files:

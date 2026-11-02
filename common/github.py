@@ -16,8 +16,19 @@ S.headers.update({"Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
 def get(url: str, headers: dict | None = None, **params) -> requests.Response:
     if not url.startswith("http"):
         url = API + url
+    failures = 0
     while True:
-        r = S.get(url, params=params, headers=headers)
+        try:
+            r = S.get(url, params=params, headers=headers, timeout=60)
+        except (requests.ConnectionError, requests.Timeout) as e:
+            # Quedas momentâneas de conexão: tenta de novo com espera crescente.
+            failures += 1
+            if failures > 8:
+                raise
+            wait = min(300, 5 * 2 ** (failures - 1))
+            print(f"[rede] {type(e).__name__}; nova tentativa em {wait}s ({failures}/8)")
+            time.sleep(wait)
+            continue
         if r.status_code in (403, 429):
             if "Retry-After" in r.headers:
                 time.sleep(int(r.headers["Retry-After"]) + 1)
