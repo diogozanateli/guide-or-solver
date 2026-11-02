@@ -7,6 +7,7 @@ Entrada: data/candidates.jsonl  Saída: data/instances.jsonl, data/exclusions.cs
 from __future__ import annotations
 
 import csv
+import subprocess
 import sys
 from pathlib import Path
 
@@ -51,10 +52,22 @@ def validate(inst: dict, cfg: dict) -> dict | None:
         return exclude(iid, "test_patch_nao_aplica")
     tests = patch_files(inst["test_patch"])
 
-    before = [run_tests(d, tests, cfg["test_timeout_s"]) for _ in range(cfg["repeats"])]
+    try:
+        before = [
+            run_tests(d, tests, cfg["test_timeout_s"])
+            for _ in range(cfg["repeats"])
+        ]
+    except subprocess.TimeoutExpired:
+        return exclude(iid, "timeout_testes_antes")
     if not apply_patch(d, inst["code_patch"]):
         return exclude(iid, "code_patch_nao_aplica")
-    after = [run_tests(d, tests, cfg["test_timeout_s"]) for _ in range(cfg["repeats"])]
+    try:
+        after = [
+            run_tests(d, tests, cfg["test_timeout_s"])
+            for _ in range(cfg["repeats"])
+        ]
+    except subprocess.TimeoutExpired:
+        return exclude(iid, "timeout_testes_depois")
 
     if not before[0] or not after[0]:
         return exclude(iid, "testes_nao_executam")
