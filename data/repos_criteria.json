@@ -1,0 +1,35 @@
+{
+ "queried_at": "2026-11-02T21:18:00+00:00",
+ "criteria": {
+  "min_stars": 1000,
+  "max_size_mb": 200,
+  "min_linked_prs": 10,
+  "created_before": "2023-01-01",
+  "min_test_files": 20,
+  "heavy_deps": [
+   "torch",
+   "tensorflow",
+   "jax",
+   "jaxlib",
+   "paddlepaddle",
+   "onnxruntime",
+   "cupy",
+   "triton",
+   "nvidia-",
+   "transformers",
+   "vllm",
+   "xformers"
+  ],
+  "exclude_file": "config/excluded_repos.csv",
+  "max_repos": 20,
+  "since": "2025-01-01",
+  "until": "2026-10-31",
+  "excluded_repos": [
+   "astrbotdevs/astrbot",
+   "keon/algorithms",
+   "openai/openai-python",
+   "thealgorithms/python",
+   "trailofbits/algo"
+  ]
+ }
+}
