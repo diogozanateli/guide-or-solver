@@ -5,3 +5,4 @@ work/
 .env
 results/**/workdir/
 ollama.log
+ollama.log
