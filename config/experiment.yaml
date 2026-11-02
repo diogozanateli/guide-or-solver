@@ -1,49 +1,33 @@
+# Congelar este arquivo após o piloto. Toda alteração deve ser registrada no artigo.
+
+selection:                     # critérios de 00_select_repos.py → data/repos.csv
+  min_stars: 1000
+  max_size_mb: 200
+  min_linked_prs: 10           # PRs mesclados vinculados a issues no período
+  max_repos: 40                # aprovados, em ordem decrescente de estrelas
+
 mining:
-  repos:
-  - psf/requests
-  - pallets/click
-  - pallets/flask
-  - marshmallow-code/marshmallow
-  - python-attrs/attrs
-  - pallets/jinja
-  - pallets/werkzeug
-  - encode/httpx
-  - encode/starlette
-  - Textualize/rich
-  - fastapi/typer
-  - pypa/packaging
-  - python-jsonschema/jsonschema
-  - pytest-dev/pluggy
-  - PyCQA/isort
-  - pylint-dev/astroid
-  - hynek/structlog
-  - agronholm/anyio
-  - more-itertools/more-itertools
-  - arrow-py/arrow
-  - Delgan/loguru
-  - tqdm/tqdm
-  - mkdocs/mkdocs
-  - pydantic/pydantic
-  since: '2025-01-01'
-  until: '2026-10-31'
-  max_code_files: 3
+  since: "2025-01-01"          # posterior ao corte de treinamento do modelo
+  until: "2026-10-31"
+  max_code_files: 3            # patch humano com até N arquivos de código
   max_candidates_per_repo: 30
+
 validation:
-  repeats: 3
+  repeats: 3                   # execuções por versão para descartar testes flaky
   install_timeout_s: 900
   test_timeout_s: 900
+
 model:
-  name: ollama/qwen2.5-coder:7b
-  api_base: http://localhost:11434
+  name: "ollama/qwen2.5-coder:7b"
+  api_base: "http://localhost:11434"
   temperature: 0.0
   seed: 42
-  num_ctx: 32768
+  num_ctx: 32768               # o Ollama trunca o contexto sem avisar se omitido
+
 agent:
-  step_limit: 50
+  step_limit: 50               # máximo de ações por execução
   command_timeout_s: 120
   contextualizer_step_limit: 30
-conditions:
-- C1
-- C2
-- C3
-runs_per_condition: 1
+
+conditions: [C1, C2, C3]
+runs_per_condition: 1          # k; aumentar num subconjunto se a cota permitir

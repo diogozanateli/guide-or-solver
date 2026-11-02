@@ -7,6 +7,7 @@ implementação (C3), em *issues* reais de projetos Python *open-source*.
 ## Estrutura
 
 ```
+DIARIO_EXPERIMENTO.md    # registro de decisões, ambiente e resultados (para a escrita)
 config/experiment.yaml   # TODOS os parâmetros fixados antes da coleta
 prompts/                 # prompts versionados (solver e contextualizadores)
 common/                  # utilitários compartilhados (config, git, testes)
