@@ -43,15 +43,28 @@ class LLM:
 
     def __call__(self, stage: str, prompt: str) -> str:
         t0 = time.time()
-        r = requests.post(self.url, timeout=3600, json={
-            "model": self.tag, "stream": False, "options": self.options,
-            "messages": [{"role": "user", "content": prompt}]})
-        r.raise_for_status()
-        data = r.json()
+        last = None
+        for attempt in range(3):  # erros transitórios de rede/servidor não devem perder o CodeScout inteiro
+            try:
+                r = requests.post(self.url, timeout=3600, json={
+                    "model": self.tag, "stream": False, "options": self.options,
+                    "messages": [{"role": "user", "content": prompt}]})
+                r.raise_for_status()
+                data = r.json()
+                break
+            except (requests.RequestException, ValueError) as e:
+                last = e
+                time.sleep(5 * (attempt + 1))
+        else:
+            raise RuntimeError(f"CodeScout: falha em {stage} após 3 tentativas: {last}")
         text = data["message"]["content"]
+        pe = data.get("prompt_eval_count", 0) or 0
         self.calls.append({"stage": stage, "prompt": prompt, "response": text,
-                           "input_tokens": data.get("prompt_eval_count", 0),
-                           "output_tokens": data.get("eval_count", 0),
+                           "input_tokens": pe,
+                           "output_tokens": data.get("eval_count", 0) or 0,
+                           # prompt do tamanho de num_ctx => o Ollama truncou o INÍCIO (instruções)
+                           "done_reason": data.get("done_reason"),
+                           "near_ctx_limit": pe >= 0.95 * self.options["num_ctx"],
                            "duration_s": round(time.time() - t0, 1)})
         return text
 
@@ -325,6 +338,7 @@ def run_codescout(repo: Path, problem_statement: str, model_name: str, gen: dict
         "c2_contains_code": bool(leftover), "c2_code_blocks": leftover,
         "guidance": {"C2": localization(ps_c2), "C3": localization(ps_c3)},
         "calls": llm.calls, "llm_calls": len(llm.calls),
+        "any_truncated": any(c["near_ctx_limit"] or c["done_reason"] == "length" for c in llm.calls),
         "input_tokens": sum(c["input_tokens"] for c in llm.calls),
         "output_tokens": sum(c["output_tokens"] for c in llm.calls),
         "duration_s": round(time.time() - t0, 1),

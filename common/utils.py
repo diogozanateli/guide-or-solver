@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -13,7 +15,18 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 RESULTS = ROOT / "results"
-WORK = ROOT / "work"
+# FORA do repositório: o agente roda sem sandbox e, com WORK dentro de ROOT, um simples
+# "cd ../.." chegaria a data/ (patch humano, FAIL_TO_PASS) e results/ (outras condições).
+WORK = Path(os.environ.get("GOS_WORK", "/tmp/gos_work"))
+
+# Artefatos de ambiente/trabalho que nunca devem entrar no patch do agente.
+GIT_EXCLUDES = [".venv/", ".report.json", ".tmp.patch", "__pycache__/", "*.pyc",
+                ".pytest_cache/", "*.egg-info/", ".mypy_cache/", ".ruff_cache/"]
+
+# Indícios de que o agente foi procurar o gabarito ou arquivos do projeto de pesquisa.
+LEAK_PATTERNS = [r"/kaggle", r"gos/(?:data|results|config)", r"instances[\w.-]*\.jsonl",
+                 r"code_patch|test_patch|FAIL_TO_PASS|PASS_TO_PASS"]
+_LEAK_RE = re.compile("|".join(LEAK_PATTERNS))
 
 
 def load_config() -> dict:
@@ -61,8 +74,14 @@ def append_jsonl(path: Path, record: dict) -> None:
 
 
 def run(cmd: str, cwd: Path | None = None, timeout: int = 900) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True,
-                          text=True, timeout=timeout)
+    """Executa um comando. Timeout NÃO levanta exceção: devolve returncode 124."""
+    try:
+        return subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True,
+                              text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as e:
+        txt = lambda x: x.decode(errors="ignore") if isinstance(x, bytes) else (x or "")
+        return subprocess.CompletedProcess(cmd, 124, txt(e.stdout),
+                                           txt(e.stderr) + f"\n[timeout após {timeout}s]")
 
 
 def split_patch(diff: str) -> tuple[str, str]:
@@ -94,24 +113,46 @@ def patch_files(diff: str) -> list[str]:
             if l.startswith("diff --git")]
 
 
+def new_files_in(diff: str) -> list[str]:
+    """Arquivos CRIADOS pelo patch (ex.: scripts de reprodução do agente)."""
+    out, cur = [], None
+    for l in diff.splitlines():
+        if l.startswith("diff --git"):
+            cur = l.split(" b/")[-1].strip()
+        elif l.startswith("new file mode") and cur:
+            out.append(cur)
+    return out
+
+
+def _write_excludes(repo: Path) -> None:
+    p = repo / ".git" / "info" / "exclude"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text("\n".join(GIT_EXCLUDES) + "\n")
+
+
 def fresh_checkout(inst: dict, dest: Path) -> Path:
     """Clona o repositório na revisão base, sem histórico futuro (evita vazamento)."""
     if dest.exists():
         shutil.rmtree(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     url = f"https://github.com/{inst['repo']}.git"
-    run(f"git init -q {dest}")
-    run(f"git remote add origin {url}", cwd=dest)
+    for cmd in (f"git init -q {dest}", f"git remote add origin {url}"):
+        r = run(cmd, cwd=dest if dest.exists() else None)
+        if r.returncode != 0:
+            raise RuntimeError(f"{cmd}: {r.stderr}")
     r = run(f"git fetch -q --depth 1 origin {inst['base_commit']}", cwd=dest)
     if r.returncode != 0:
         raise RuntimeError(r.stderr)
-    run("git checkout -q FETCH_HEAD", cwd=dest)
+    r = run("git checkout -q FETCH_HEAD", cwd=dest)
+    if r.returncode != 0:
+        raise RuntimeError(f"git checkout falhou: {r.stderr}")
     run("git remote remove origin", cwd=dest)
+    _write_excludes(dest)
     return dest
 
 
 def setup_venv(repo_dir: Path, timeout: int = 900) -> bool:
-    """Cria .venv com uv e instala o projeto e o pytest."""
+    """Cria .venv com uv e instala o projeto e o pytest. False em qualquer falha/timeout."""
     cmds = [
         "uv venv -q .venv",
         "uv pip install -q --python .venv/bin/python -e '.[test]' "
@@ -130,6 +171,7 @@ def setup_venv(repo_dir: Path, timeout: int = 900) -> bool:
 
 
 def apply_patch(repo_dir: Path, diff: str) -> bool:
+    """True = sem conflito. ATENÇÃO: patch vazio também devolve True; use patch_nonempty."""
     if not diff.strip():
         return True
     p = repo_dir / ".tmp.patch"
@@ -140,9 +182,12 @@ def apply_patch(repo_dir: Path, diff: str) -> bool:
 
 
 def run_tests(repo_dir: Path, test_files: list[str], timeout: int = 900) -> dict[str, str]:
-    """Roda pytest e devolve {nodeid: outcome}."""
+    """Roda pytest e devolve {nodeid: outcome}. Sem arquivos de teste existentes: {}
+    (antes isso rodava a suíte inteira do repositório)."""
     report = repo_dir / ".report.json"
     files = " ".join(f for f in test_files if (repo_dir / f).exists())
+    if not files:
+        return {}
     run(f".venv/bin/python -m pytest -q -p no:cacheprovider --json-report "
         f"--json-report-file={report.name} {files}", cwd=repo_dir, timeout=timeout)
     if not report.exists():
@@ -153,6 +198,20 @@ def run_tests(repo_dir: Path, test_files: list[str], timeout: int = 900) -> dict
 
 
 def git_diff(repo_dir: Path) -> str:
-    excl = "':(exclude).venv' ':(exclude).report.json'"
+    excl = " ".join(f"':(exclude){e.rstrip('/')}'" for e in (".venv/", ".report.json", ".tmp.patch"))
     run("git add -A", cwd=repo_dir)
     return run(f"git diff --cached -- . {excl}", cwd=repo_dir).stdout
+
+
+def audit_leak(messages: list[dict]) -> list[dict]:
+    """Procura, nos turnos do agente (a partir da 3ª mensagem), acessos a caminhos do
+    projeto de pesquisa ou a nomes de campos do gabarito. Lista vazia = nenhum indício."""
+    hits = []
+    for i, m in enumerate(messages):
+        if i < 2:  # system e instância (contêm só templates + issue)
+            continue
+        txt = json.dumps(m, ensure_ascii=False, default=str)
+        for mt in _LEAK_RE.finditer(txt):
+            hits.append({"msg": i, "role": m.get("role"), "match": mt.group(0),
+                         "context": txt[max(0, mt.start() - 80): mt.end() + 80]})
+    return hits[:20]
