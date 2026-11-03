@@ -25,6 +25,8 @@ from pathlib import Path
 
 import yaml
 
+from minisweagent.models.litellm_textbased_model import LitellmTextbasedModel
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.utils import (DATA, WORK, fresh_checkout, git_diff, load_config,  # noqa: E402
                           model_results_dir, read_jsonl, selected_model, setup_venv)
@@ -40,15 +42,10 @@ from minisweagent.models.litellm_model import LitellmModel  # noqa: E402
 
 
 def default_agent_config() -> tuple[dict, str]:
-    """Configuração padrão do mini-swe-agent (prompts de sistema/instância etc.)."""
-    try:
-        from minisweagent.config import get_config_path
-        path = Path(get_config_path("default"))
-    except Exception:
-        from minisweagent.config import builtin_config_dir
-        path = Path(builtin_config_dir) / "default.yaml"
-    return yaml.safe_load(path.read_text()), str(path)
+    from minisweagent.config import get_config_path
 
+    path = Path(get_config_path("mini_textbased"))
+    return yaml.safe_load(path.read_text()), str(path)
 
 class Counter:
     """Acumula tokens reportados pelo Ollama (via LiteLLM) e chamadas ao modelo."""
@@ -72,34 +69,96 @@ class Counter:
         model.query = query
 
 
-def make_model(cfg: dict) -> LitellmModel:
+def make_model(cfg: dict) -> LitellmTextbasedModel:
     g = cfg["generation"]
-    return LitellmModel(
-        model_name=MODEL["name"],
-        model_kwargs={"api_base": g["api_base"], "temperature": g["temperature"],
-                      "seed": g["seed"], "num_ctx": g["num_ctx"]},
+
+    model_name = MODEL["name"]
+
+    # Converte o provedor Ollama para o modo textual do LiteLLM.
+    if model_name.startswith("ollama/"):
+        model_name = model_name.replace("ollama/", "ollama_chat/", 1)
+    elif not model_name.startswith("ollama_chat/"):
+        model_name = f"ollama_chat/{model_name}"
+
+    return LitellmTextbasedModel(
+        model_name=model_name,
+        model_kwargs={
+            "api_base": g["api_base"],
+            "temperature": g["temperature"],
+            "seed": g["seed"],
+            "num_ctx": g["num_ctx"],
+            "drop_params": True,
+        },
         cost_tracking="ignore_errors",
     )
 
 
 def run_agent(cfg: dict, workdir: Path, task: str) -> dict:
     agent_cfg, _ = default_agent_config()
-    agent_kwargs = {**agent_cfg.get("agent", {}), "step_limit": cfg["agent"]["step_limit"]}
+
+    agent_kwargs = {
+        **agent_cfg.get("agent", {}),
+        "step_limit": cfg["agent"]["step_limit"],
+    }
+
     model = make_model(cfg)
-    counter = Counter(model)
-    env = LocalEnvironment(cwd=str(workdir), timeout=cfg["agent"]["command_timeout_s"],
-                           env={"PATH": f"{workdir}/.venv/bin:/usr/local/bin:/usr/bin:/bin"})
+
+    env = LocalEnvironment(
+        cwd=str(workdir),
+        timeout=cfg["agent"]["command_timeout_s"],
+        env={
+            "PATH": f"{workdir}/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+        },
+    )
+
     agent = DefaultAgent(model, env, **agent_kwargs)
+
     t0 = time.time()
+
     try:
-        status, output = agent.run(task)
-    except Exception as e:  # registrar falhas de execução em vez de abortar
-        status, output = type(e).__name__, str(e)
+        result = agent.run(task)
+
+        status = result.get("exit_status", "unknown")
+        output = result.get("submission", "")
+
+    except Exception as e:
+        status = type(e).__name__
+        output = str(e)
+        result = {}
+
+    duration = round(time.time() - t0, 1)
+
+    # Coleta métricas diretamente da trajetória.
+    input_tokens = 0
+    output_tokens = 0
+    llm_calls = 0
+    actions = 0
+
+    for message in agent.messages:
+        extra = message.get("extra", {})
+
+        # Contabiliza ações produzidas pelo modelo.
+        actions += len(extra.get("actions", []))
+
+        # Recupera uso de tokens da resposta do LiteLLM.
+        response = extra.get("response", {})
+        usage = response.get("usage", {})
+
+        if usage:
+            llm_calls += 1
+            input_tokens += usage.get("prompt_tokens", 0) or 0
+            output_tokens += usage.get("completion_tokens", 0) or 0
+
     return {
-        "status": status, "output": output, "duration_s": round(time.time() - t0, 1),
-        "input_tokens": counter.inp, "output_tokens": counter.out,
-        "llm_calls": counter.calls,
-        "actions": sum(1 for m in agent.messages if m.get("role") == "assistant"),
+        "status": status,
+        "output": output,
+        "exit_status": status,
+        "submission": output,
+        "duration_s": duration,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "llm_calls": llm_calls,
+        "actions": actions,
         "trajectory": agent.messages,
     }
 
