@@ -133,11 +133,17 @@ def main() -> None:
     ap.add_argument("--model", help="modelo de config/experiment.yaml (padrão: o primeiro)")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--conditions", nargs="+")
+    ap.add_argument("--instances", default=str(DATA / "instances.jsonl"), help="Arquivo JSONL com as instâncias do experimento")
     args = ap.parse_args()
     cfg = load_config()
     print(f"Modelo: {MODEL['name']} → {RESULTS}")
     save_agent_config()
-    instances = read_jsonl(DATA / "instances.jsonl")[: args.limit]
+    instances = read_jsonl(Path(args.instances))
+
+    if args.limit:
+        instances = instances[:args.limit]
+
+    print(f"Instâncias carregadas: {len(instances)}")
 
     for inst in instances:
         out_dir = RESULTS / inst["instance_id"]
