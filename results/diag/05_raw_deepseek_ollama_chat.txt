@@ -1,0 +1,83 @@
+
+======== ollama_chat/deepseek-coder-v2:16b passo 1 ========
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/dist-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 304, in _make_common_sync_call
+    response = sync_httpx_client.post(
+        url=api_base,
+    ...<4 lines>...
+        logging_obj=logging_obj,
+    )
+  File "/usr/local/lib/python3.13/dist-packages/litellm/llms/custom_httpx/http_handler.py", line 1195, in post
+    _raise_masked_sync_error(e, stream)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/litellm/llms/custom_httpx/http_handler.py", line 434, in _raise_masked_sync_error
+    raise MaskedHTTPStatusError(e, message=_text, text=_text) from None
+litellm.llms.custom_httpx.http_handler.MaskedHTTPStatusError: Client error '400 Bad Request' for url 'http://localhost:11434/api/chat'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/dist-packages/litellm/main.py", line 5613, in completion
+    response = _complete_ollama_chat(_dispatch_ctx)
+  File "/usr/local/lib/python3.13/dist-packages/litellm/main.py", line 4170, in _complete_ollama_chat
+    return base_llm_http_handler.completion(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=model,
+        ^^^^^^^^^^^^
+    ...<14 lines>...
+        client=client,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 599, in completion
+    response = self._make_common_sync_call(
+        sync_httpx_client=sync_httpx_client,
+    ...<7 lines>...
+        logging_obj=logging_obj,
+    )
+  File "/usr/local/lib/python3.13/dist-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 321, in _make_common_sync_call
+    raise self._handle_error(e=e, provider_config=provider_config)
+          ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/dist-packages/litellm/llms/custom_httpx/llm_http_handler.py", line 5573, in _handle_error
+    raise provider_config.get_error_class(
+    ...<3 lines>...
+    )
+litellm.llms.ollama.common_utils.OllamaError: {"error":"registry.ollama.ai/library/deepseek-coder-v2:16b does not support tools"}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/kaggle/working/gos/diagnostico.py", line 351, in <module>
+    main()
+    ~~~~^^
+  File "/kaggle/working/gos/diagnostico.py", line 347, in main
+    a.f(a)
+    ~~~^^^
+  File "/kaggle/working/gos/diagnostico.py", line 188, in cmd_raw
+    r = litellm.completion(model=model, messages=msgs, **kw)
+  File "/usr/local/lib/python3.13/dist-packages/litellm/utils.py", line 1577, in wrapper
+    raise e
+  File "/usr/local/lib/python3.13/dist-packages/litellm/utils.py", line 1425, in wrapper
+    result = original_function(*args, **kwargs)
+  File "/usr/local/lib/python3.13/dist-packages/litellm/main.py", line 5657, in completion
+    raise exception_type(
+          ~~~~~~~~~~~~~~^
+        model=model,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        extra_kwargs=kwargs,
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/usr/local/lib/python3.13/dist-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 2505, in exception_type
+    raise e
+  File "/usr/local/lib/python3.13/dist-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 2475, in exception_type
+    raise APIConnectionError(
+    ...<4 lines>...
+    )
+litellm.exceptions.APIConnectionError: litellm.APIConnectionError: Ollama_chatException - {"error":"registry.ollama.ai/library/deepseek-coder-v2:16b does not support tools"}

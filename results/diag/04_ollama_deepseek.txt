@@ -1,0 +1,11 @@
+
+======== /api/show deepseek-coder-v2:16b ========
+capabilities: ['completion', 'insert']
+template contém .Tools? False
+parameters: stop                           "User:"
+stop                           "Assistant:"
+
+======== num_ctx efetivo (envia num_ctx e consulta /api/ps) ========
+deepseek-coder-v2:16b context_length: 32768 size_vram: 21999449538
+qwen2.5-coder:7b context_length: 32768 size_vram: 6608251780
+(se context_length != 32768, o num_ctx NÃO está chegando; se faltar o campo, veja o log do servidor Ollama por 'truncating input')

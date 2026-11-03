@@ -1,0 +1,27 @@
+
+======== ollama/deepseek-coder-v2:16b passo 1 ========
+finish_reason=tool_calls  n_choices=1  0.8s
+content: None
+tool_calls: [('bash', '{"command": "pwd"}')]
+
+======== ollama/deepseek-coder-v2:16b passo 2 ========
+finish_reason=tool_calls  n_choices=1  0.7s
+content: None
+tool_calls: [('bash', '{"command": "ls"}')]
+
+======== ollama/deepseek-coder-v2:16b passo 3 ========
+finish_reason=tool_calls  n_choices=1  0.6s
+content: None
+tool_calls: [('DONE', '{}')]
+
+======== ollama/deepseek-coder-v2:16b passo 4 ========
+finish_reason=tool_calls  n_choices=1  0.6s
+content: None
+tool_calls: [('DONE', '{}')]
+
+======== ollama/deepseek-coder-v2:16b passo 5 ========
+finish_reason=tool_calls  n_choices=1  0.6s
+content: None
+tool_calls: [('DONE', '{}')]
+
+chegou ao limite de passos sem resposta em texto -> modelo nunca encerra (compare com ollama_chat).

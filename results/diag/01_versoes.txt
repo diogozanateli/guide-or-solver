@@ -1,0 +1,115 @@
+
+======== Versões ========
+litellm                               1.93.2
+mini-swe-agent                        2.4.6
+
+======== Config carregada por default_agent_config() ========
+This is mini-swe-agent version 2.4.6.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/root/.config/mini-swe-agent/.env'
+chaves de topo: ['agent', 'environment', 'model']
+chaves de agent: ['system_template', 'instance_template', 'step_limit', 'cost_limit']
+model (se houver): {'observation_template': "{% if output.exception_info -%}\n<exception>{{output.exception_info}}</exception>\n{% endif -%}\n<returncode>{{output.returncode}}</returncode>\n{% if output.output | length < 10000 -%}\n<output>\n{{ output.output -}}\n</output>\n{%- else -%}\n<warning>\nThe output of your last command was too long.\nPlease try a different command that produces less output.\nIf you're looking at a file you can try use head, tail or sed to view a smaller number of lines selectively.\nIf you're using grep or find and it produced too much output, you can use a more selective search pattern.\nIf you really need to see something from the full command's output, you can redirect output to a file and then search in that file.\n</warning>\n{%- set elided_chars = output.output | length - 10000 -%}\n<output_head>\n{{ output.output[:5000] }}\n</output_head>\n<elided_chars>\n{{ elided_chars }} characters elided\n</elided_chars>\n<output_tail>\n{{ output.output[-5000:] }}\n</output_tail>\n{%- endif -%}\n", 'model_kwargs': {'drop_params': True}, 'format_error_template': '{% if finish_reason is defined and finish_reason in ["length", "tool_calls"] -%}\nYour previous response reached the output token limit (finish_reason={{ finish_reason }}) before you produced a complete action, so it was cut off. Respond more concisely and provide exactly one action in the required format. If you need to think more, do so briefly.\n{%- else -%}\nFormat error:\n\n<error>\n{{error}}\n</error>\n\nHere is general guidance on how to format your response:\n\nPlease always provide EXACTLY ONE action in triple backticks, found {{actions|length}} actions.\nIf you want to end the task, please issue the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`\nwithout any other command.\nElse, please format your response exactly as follows:\n\n<response_example>\nHere are some thoughts about why you want to perform the action.\n\n```mswea_bash_command\n<action>\n```\n</response_example>\n\nNote: In rare cases, if you need to reference a similar format in your command, you might have\nto proceed in two steps, first writing TRIPLEBACKTICKSBASH, then replacing them with ```mswea_bash_command.\n{%- endif %}'}
+system_template contém 'mswea_bash_command' (formato TEXTUAL)? True
+system_template contém 'THOUGHT'? True
+
+======== Config builtin do pacote ========
+dir: /usr/local/lib/python3.13/dist-packages/minisweagent/config
+mini.yaml                                textual=False  model_class=[]
+mini_textbased.yaml                      textual=True  model_class=[]
+default.yaml                             textual=True  model_class=[]
+benchmarks/programbench.yaml             textual=False  model_class=[]
+benchmarks/swebench_xml.yaml             textual=True  model_class=['model_class: openrouter']
+benchmarks/swebench.yaml                 textual=False  model_class=[]
+benchmarks/swebench_backticks.yaml       textual=True  model_class=[]
+benchmarks/swebench_modal.yaml           textual=False  model_class=['model_class: portkey']
+
+======== LiteLLM: como `ollama/` e `ollama_chat/` tratam tools ========
+
+-- llms/ollama/completion/transformation.py existe: True
+ 186:                     optional_params["format"] = "json"
+ 187:                 elif value["type"] == "json_schema":
+ 188:                     optional_params["format"] = value["json_schema"]["schema"]
+ 192:     def _supports_function_calling(self, ollama_model_info: dict) -> bool:
+ 194:         Check if the 'template' field in the ollama_model_info contains a 'tools' or 'function' key.
+ 197:         return "tools" in _template.lower()
+ 259:         if request_data.get("format", "") == "json":
+ 272:                     # Check if this is a function call format with name/arguments structure
+ 278:                         # Handle as function call (original behavior)
+ 279:                         function_call = response_content
+ 282:                             tool_calls=[
+ 285:                                     "function": {
+ 286:                                         "name": function_call["name"],
+ 287:                                         "arguments": json.dumps(function_call["arguments"]),
+ 289:                                     "type": "function",
+ 294:                         model_response.choices[0].finish_reason = "tool_calls"
+ 376:         format = optional_params.pop("format", None)
+ 387:             data["format"] = format
+
+-- llms/ollama/chat/transformation.py existe: True
+  30:     OllamaToolCallFunction,
+ 146:             "tools",
+ 148:             "functions",
+ 176:                 optional_params["format"] = "json"
+ 177:             if param == "response_format" and isinstance(value, dict) and value.get("type") == "json_schema":
+ 178:                 if value.get("json_schema") and value["json_schema"].get("schema"):
+ 179:                     optional_params["format"] = value["json_schema"]["schema"]
+ 185:             ### FUNCTION CALLING LOGIC ###
+ 186:             # Ollama 0.4+ supports native tool calling - pass tools directly
+ 189:             if param == "tools":
+ 190:                 optional_params["tools"] = value
+ 192:             if param == "functions":
+ 193:                 optional_params["tools"] = value
+ 195:         non_default_params.pop("functions", None)  # causes ollama requests to hang
+ 246:         format = optional_params.pop("format", None)
+ 249:         function_name = optional_params.pop("function_name", None)
+ 250:         litellm_params["function_name"] = function_name
+ 251:         tools = optional_params.pop("tools", None)
+ 259:             tool_calls = m.get("tool_calls")
+ 260:             new_tools: Optional[List[OllamaToolCall]] = None
+ 261:             if tool_calls is not None and isinstance(tool_calls, list):
+ 262:                 new_tools = []
+ 263:                 for tool in tool_calls:
+ 265:                     if typed_tool["type"] == "function":
+ 267:                         if "arguments" in typed_tool["function"]:
+ 268:                             arguments = json.loads(typed_tool["function"]["arguments"])
+ 270:                             function=OllamaToolCallFunction(
+ 271:                                 name=typed_tool["function"].get("name") or "",
+ 275:                         new_tools.append(ollama_tool_call)
+ 289:             if new_tools is not None:
+ 290:                 ollama_message["tool_calls"] = new_tools
+ 310:             data["format"] = format
+ 311:         if tools is not None:
+ 312:             data["tools"] = tools
+ 367:             request_data.get("format", "") == "json"
+ 368:             and litellm_params.get("function_name") is not None
+ 371:             function_call = json.loads(response_json_message["content"])
+ 374:                 tool_calls=[
+ 377:                         "function": {
+ 378:                             "name": function_call.get("name", litellm_params.get("function_name")),
+ 379:                             "arguments": json.dumps(function_call.get("arguments", function_call)),
+ 381:                         "type": "function",
+ 387:             model_response.choices[0].finish_reason = "tool_calls"
+ 391:             # Set finish_reason to "tool_calls" when tool_calls are present
+ 393:             if _message.tool_calls:
+ 394:                 model_response.choices[0].finish_reason = "tool_calls"
+ 433:     def _is_function_call_complete(self, function_args: Union[str, dict]) -> bool:
+ 434:         if isinstance(function_args, dict):
+ 437:             json.loads(function_args)
+ 452:                     "tool_calls": [{
+ 453:                         "function": {
+ 474:             # process tool calls - if complete function arg - add id to tool call
+ 475:             tool_calls = chunk["message"].get("tool_calls")
+ 476:             if tool_calls is not None:
+ 477:                 for tool_call in tool_calls:
+ 478:                     function_args = tool_call.get("function").get("arguments")
+ 479:                     if function_args is not None and len(function_args) > 0:
+ 480:                         is_function_call_complete = self._is_function_call_complete(function_args)
+ 481:                         if is_function_call_complete:
+ 512:                 tool_calls=tool_calls,
+ 517:                 # Override finish_reason when tool_calls are present
+ 519:                 if tool_calls is not None:
+ 520:                     finish_reason = "tool_calls"
+
+=> Procure por: `format = json` quando há tools, injeção de prompt de função,
+   e qual endpoint (/api/generate vs /api/chat) cada provider usa.

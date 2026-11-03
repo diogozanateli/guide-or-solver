@@ -1,0 +1,20 @@
+[
+ {
+  "role": "system",
+  "content": "You are a helpful assistant that can interact with a computer. Use the bash tool."
+ },
+ {
+  "role": "user",
+  "content": "Task: List the files in the current directory, read a.txt with cat, then finish.\n\nRun commands with the bash tool. When finished, run exactly:\necho COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT\nDo not combine it with other commands."
+ },
+ {
+  "role": "exit",
+  "content": "Error calculating cost for model ollama/deepseek-coder-v2:16b: Cost must be > 0.0, got 0.0, perhaps it's not registered? You can ignore this issue from your config file with cost_tracking: 'ignore_errors' or globally with export MSWEA_COST_TRACKING='ignore_errors'. Alternatively check the 'Cost tracking' section in the documentation at https://klieret.short.gy/mini-local-models.  Still stuck? Please open a github issue at https://github.com/SWE-agent/mini-swe-agent/issues/new/choose!",
+  "extra": {
+   "exit_status": "RuntimeError",
+   "submission": "",
+   "exception_str": "Error calculating cost for model ollama/deepseek-coder-v2:16b: Cost must be > 0.0, got 0.0, perhaps it's not registered? You can ignore this issue from your config file with cost_tracking: 'ignore_errors' or globally with export MSWEA_COST_TRACKING='ignore_errors'. Alternatively check the 'Cost tracking' section in the documentation at https://klieret.short.gy/mini-local-models.  Still stuck? Please open a github issue at https://github.com/SWE-agent/mini-swe-agent/issues/new/choose!",
+   "traceback": "Traceback (most recent call last):\n  File \"/usr/local/lib/python3.13/dist-packages/minisweagent/models/litellm_model.py\", line 112, in _calculate_cost\n    raise ValueError(f\"Cost must be > 0.0, got {cost}\")\nValueError: Cost must be > 0.0, got 0.0\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/usr/local/lib/python3.13/dist-packages/minisweagent/agents/default.py\", line 98, in run\n    self.step()\n    ~~~~~~~~~^^\n  File \"/usr/local/lib/python3.13/dist-packages/minisweagent/agents/default.py\", line 128, in step\n    return self.execute_actions(self.query())\n                                ~~~~~~~~~~^^\n  File \"/usr/local/lib/python3.13/dist-packages/minisweagent/agents/default.py\", line 149, in query\n    message = self.model.query(self.messages)\n  File \"/usr/local/lib/python3.13/dist-packages/minisweagent/models/litellm_model.py\", line 85, in query\n    cost_output = self._calculate_cost(response)\n  File \"/usr/local/lib/python3.13/dist-packages/minisweagent/models/litellm_model.py\", line 125, in _calculate_cost\n    raise RuntimeError(msg) from e\nRuntimeError: Error calculating cost for model ollama/deepseek-coder-v2:16b: Cost must be > 0.0, got 0.0, perhaps it's not registered? You can ignore this issue from your config file with cost_tracking: 'ignore_errors' or globally with export MSWEA_COST_TRACKING='ignore_errors'. Alternatively check the 'Cost tracking' section in the documentation at https://klieret.short.gy/mini-local-models.  Still stuck? Please open a github issue at https://github.com/SWE-agent/mini-swe-agent/issues/new/choose!\n"
+  }
+ }
+]

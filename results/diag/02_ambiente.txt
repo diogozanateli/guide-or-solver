@@ -1,0 +1,12 @@
+This is mini-swe-agent version 2.4.6.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/root/.config/mini-swe-agent/.env'
+assinatura execute: (action: dict, cwd: str = '', *, timeout: int | None = None) -> dict[str, typing.Any]
+[marcador sozinho      ] levantou Submitted
+[marcador && outro     ] levantou Submitted
+[outro antes           ] NÃO levantou Submitted | returncode=0 | output='oi\nCOMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT\n'
+[marcador com exit!=0  ] NÃO levantou Submitted | returncode=1 | output='COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT\n'
+[comando normal        ] NÃO levantou Submitted | returncode=0 | output='/tmp\n'
+[THOUGHT no command    ] NÃO levantou Submitted | returncode=127 | output='/bin/sh: 1: THOUGHT:: not found\n'
+
+Esperado (main): só os casos com o marcador na PRIMEIRA linha e returncode 0 levantam Submitted.

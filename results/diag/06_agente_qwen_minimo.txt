@@ -1,0 +1,20 @@
+This is mini-swe-agent version 2.4.6.
+Check the v2 migration guide at https://klieret.short.gy/mini-v2-migration
+Loading global config from '/root/.config/mini-swe-agent/.env'
+Error calculating cost for model ollama/qwen2.5-coder:7b: Cost must be > 0.0, got 0.0, perhaps it's not registered? You can ignore this issue from your config file with cost_tracking: 'ignore_errors' or globally with export MSWEA_COST_TRACKING='ignore_errors'. Alternatively check the 'Cost tracking' section in the documentation at https://klieret.short.gy/mini-local-models.  Still stuck? Please open a github issue at https://github.com/SWE-agent/mini-swe-agent/issues/new/choose!
+duração 1.5s
+
+======== Retorno de agent.run() ========
+tipo: dict
+chaves: ['EXCEÇÃO']
+exit_status: None
+submission: None
+=> se seu código faz `status, output = agent.run(...)` com dict de 2 chaves, status vira a STRING 'exit_status'.
+
+======== Mensagens ========
+total: 3 Counter({'system': 1, 'user': 1, 'exit': 1})
+assistant=0  tool_calls=0  (diferença = respostas sem tool call/FormatError)
+[00] system    'You are a helpful assistant that can interact with a computer. Use the bash tool.'
+[01] user      'Task: List the files in the current directory, read a.txt with cat, then finish.\n\nRun commands with the bash tool. When finished, run exactly:\necho COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT\nDo not combine'
+[02] exit      "Error calculating cost for model ollama/qwen2.5-coder:7b: Cost must be > 0.0, got 0.0, perhaps it's not registered? You can ignore this issue from your config file with cost_tracking: 'ignore_errors' "
+trajetória salva em /kaggle/working/gos/diag_traj_ollama_minimo.json

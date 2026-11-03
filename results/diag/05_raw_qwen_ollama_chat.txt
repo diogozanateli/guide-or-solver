@@ -1,0 +1,6 @@
+
+======== ollama_chat/qwen2.5-coder:7b passo 1 ========
+finish_reason=stop  n_choices=1  1.5s
+content: '{"name": "bash", "arguments": {"command": "pwd"}}\n{"name": "bash", "arguments": {"command": "ls"}}\nDONE'
+tool_calls: []
+-> sem tool_calls: o modelo CONSEGUE responder em texto (encerramento possível).
