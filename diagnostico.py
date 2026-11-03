@@ -27,6 +27,8 @@ import tempfile
 import time
 import urllib.request
 
+# modelos locais têm custo 0: sem isso o LitellmModel levanta exceção logo na 1ª chamada
+os.environ.setdefault("MSWEA_COST_TRACKING", "ignore_errors")
 API_BASE = os.environ.get("OLLAMA_HOST_URL", "http://localhost:11434")
 MARKER = "COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT"
 
@@ -192,7 +194,11 @@ def cmd_raw(a):
         tcs = m.tool_calls or []
         print("tool_calls:", [(t.function.name, t.function.arguments) for t in tcs])
         if not tcs:
-            print("-> sem tool_calls: o modelo CONSEGUE responder em texto (encerramento possível).")
+            c = (m.content or "").strip()
+            if c.startswith("{") or '"name"' in c:
+                print("-> sem tool_calls estruturados, mas o CONTEÚDO parece tool call em texto (parser do Ollama falhou).")
+            else:
+                print("-> sem tool_calls e conteúdo em texto puro: o modelo consegue encerrar em texto.")
             break
         msgs.append(m.model_dump() if hasattr(m, "model_dump") else dict(m))
         for t in tcs:
@@ -223,17 +229,35 @@ def cmd_agente(a):
     from minisweagent.environments.local import LocalEnvironment
     from minisweagent.models.litellm_model import LitellmModel
 
-    kwargs = {"step_limit": a.steps}
-    if a.modo == "default":
+    import yaml
+    cfg_dir = os.path.join(os.path.dirname(importlib.import_module("minisweagent").__file__), "config")
+    mkw = {}
+    if a.classe == "textbased":
+        mod = importlib.import_module("minisweagent.models.litellm_textbased_model")
+        cls = [c for n, c in inspect.getmembers(mod, inspect.isclass)
+               if c.__module__ == mod.__name__ and n.endswith("Model")][0]
+        a.modo = "builtin"
+    else:
+        cls = LitellmModel
+
+    if a.modo == "builtin":
+        fn = "mini_textbased.yaml" if a.classe == "textbased" else "mini.yaml"
+        cfg = yaml.safe_load(open(os.path.join(cfg_dir, fn), encoding="utf-8"))
+        kwargs = {**cfg.get("agent", {}), "step_limit": a.steps}
+        mkw = {k: v for k, v in cfg.get("model", {}).items()
+               if k not in ("model_class", "model_name", "model_kwargs")}
+        print("config:", fn, "| classe do modelo:", cls.__name__)
+    elif a.modo == "default":
         from runner.run_condition import default_agent_config
         cfg, _ = default_agent_config()
         kwargs = {**cfg.get("agent", {}), "step_limit": a.steps}
     else:
-        kwargs.update(system_template=MIN_SYSTEM, instance_template=MIN_INSTANCE)
+        kwargs = {"step_limit": a.steps, "system_template": MIN_SYSTEM, "instance_template": MIN_INSTANCE}
 
-    model = LitellmModel(
+    model = cls(
         model_name=f"{a.provider}/{a.model}",
         model_kwargs=dict(api_base=API_BASE, temperature=0, seed=42, num_ctx=32768),
+        **mkw,
     )
     work = tempfile.mkdtemp()
     open(os.path.join(work, "a.txt"), "w").write("hello\n")
@@ -245,6 +269,7 @@ def cmd_agente(a):
     try:
         result = agent.run(task)
     except Exception as e:
+        import traceback; traceback.print_exc()
         result = {"EXCEÇÃO": f"{type(e).__name__}: {e}"}
     print(f"duração {time.time()-t0:.1f}s")
 
@@ -274,7 +299,7 @@ def cmd_agente(a):
     for attr in ("n_calls", "cost"):
         if hasattr(model, attr):
             print(f"model.{attr} =", getattr(model, attr))
-    out = os.path.join(os.getcwd(), f"diag_traj_{a.provider}_{a.modo}.json")
+    out = os.path.join(os.getcwd(), f"diag_traj_{a.model.split(':')[0]}_{a.provider}_{a.classe}_{a.modo}.json")
     json.dump(msgs, open(out, "w"), indent=1, default=str)
     print("trajetória salva em", out)
 
@@ -339,7 +364,8 @@ def main():
     g = sp.add_parser("agente")
     g.add_argument("--model", required=True)
     g.add_argument("--provider", default="ollama", choices=["ollama", "ollama_chat"])
-    g.add_argument("--modo", default="minimo", choices=["minimo", "default"])
+    g.add_argument("--modo", default="minimo", choices=["minimo", "default", "builtin"])
+    g.add_argument("--classe", default="tool", choices=["tool", "textbased"])
     g.add_argument("--steps", type=int, default=8)
     g.set_defaults(f=cmd_agente)
     t = sp.add_parser("traj"); t.add_argument("path"); t.set_defaults(f=cmd_traj)
