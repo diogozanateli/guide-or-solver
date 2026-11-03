@@ -84,74 +84,22 @@ def make_model(cfg: dict) -> LitellmModel:
 
 def run_agent(cfg: dict, workdir: Path, task: str) -> dict:
     agent_cfg, _ = default_agent_config()
-
-    # Reforça as instruções de execução do agente.
-    agent_cfg["agent"]["system_template"] += """
-
-## Additional Execution Rules
-
-- Every command must contribute directly to understanding,
-  implementing, or verifying the requested solution.
-- Carefully inspect the output of every command before
-  choosing the next action.
-- Do not repeat a command that has already succeeded unless
-  new information makes repeating it necessary.
-- If a command produces no useful progress, change your approach.
-- Do not use echo, print, or similar commands merely to repeat
-  the task or describe what should be done.
-- Before finishing, verify whether the implementation addresses
-  the issue and whether relevant tests pass.
-- When the task is complete, use the required finalization command.
-"""
-
-    agent_cfg["agent"]["instance_template"] += """
-
-## Additional Progress Rules
-
-- Keep track of files and functions already inspected.
-- Keep track of changes already made.
-- Do not repeat an action without a concrete reason.
-- If two consecutive actions produce no progress, reconsider
-  your approach.
-- Do not claim the issue is resolved without verification evidence.
-"""
-
-    agent_kwargs = {
-        **agent_cfg.get("agent", {}),
-        "step_limit": cfg["agent"]["step_limit"]
-    }
-
+    agent_kwargs = {**agent_cfg.get("agent", {}), "step_limit": cfg["agent"]["step_limit"]}
     model = make_model(cfg)
     counter = Counter(model)
-
-    env = LocalEnvironment(
-        cwd=str(workdir),
-        timeout=cfg["agent"]["command_timeout_s"],
-        env={
-            "PATH": f"{workdir}/.venv/bin:/usr/local/bin:/usr/bin:/bin"
-        }
-    )
-
+    env = LocalEnvironment(cwd=str(workdir), timeout=cfg["agent"]["command_timeout_s"],
+                           env={"PATH": f"{workdir}/.venv/bin:/usr/local/bin:/usr/bin:/bin"})
     agent = DefaultAgent(model, env, **agent_kwargs)
-
     t0 = time.time()
-
     try:
         status, output = agent.run(task)
-    except Exception as e:
-        # Registrar falhas de execução em vez de abortar.
+    except Exception as e:  # registrar falhas de execução em vez de abortar
         status, output = type(e).__name__, str(e)
-
     return {
-        "status": status,
-        "output": output,
-        "duration_s": round(time.time() - t0, 1),
-        "input_tokens": counter.inp,
-        "output_tokens": counter.out,
+        "status": status, "output": output, "duration_s": round(time.time() - t0, 1),
+        "input_tokens": counter.inp, "output_tokens": counter.out,
         "llm_calls": counter.calls,
-        "actions": sum(
-            1 for m in agent.messages if m.get("role") == "assistant"
-        ),
+        "actions": sum(1 for m in agent.messages if m.get("role") == "assistant"),
         "trajectory": agent.messages,
     }
 
