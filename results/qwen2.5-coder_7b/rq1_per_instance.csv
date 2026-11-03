@@ -1,0 +1,4 @@
+instance_id,condition,run,resolved,solver_actions,solver_tokens,ctx_actions,ctx_tokens,duration_s,total_actions,total_tokens
+yt-dlp__yt-dlp-16919,C1,C1_run0,False,50,1291895,0,0,242.6,50,1291895
+yt-dlp__yt-dlp-16919,C2,C2_run0,False,50,285489,0,76786,299.2,50,362275
+yt-dlp__yt-dlp-16919,C3,C3_run0,False,50,267514,0,76786,282.7,50,344300
