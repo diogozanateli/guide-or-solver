@@ -1,0 +1,4 @@
+condition,resolution_rate,n,solver_tokens,ctx_tokens,total_tokens,total_actions,duration_s
+C1,0.0,1,5734.0,0.0,5734.0,1.0,67.9
+C2,0.0,1,1995.0,88929.0,90924.0,1.0,552.6999999999999
+C3,0.0,1,2086.0,88929.0,91015.0,1.0,546.4

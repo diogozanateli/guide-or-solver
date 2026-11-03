@@ -1,0 +1,5 @@
+instance_id,condition,level,precision,recall,f1,exact
+yt-dlp__yt-dlp-16919,C2,file,0.0,0.0,0.0,False
+yt-dlp__yt-dlp-16919,C2,function,1.0,0.3333333333333333,0.5,False
+yt-dlp__yt-dlp-16919,C3,file,0.0,0.0,0.0,False
+yt-dlp__yt-dlp-16919,C3,function,1.0,0.3333333333333333,0.5,False
