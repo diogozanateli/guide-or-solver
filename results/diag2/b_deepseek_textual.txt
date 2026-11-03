@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/kaggle/working/gos/diagnostico.py", line 377, in <module>
+    main()
+    ~~~~^^
+  File "/kaggle/working/gos/diagnostico.py", line 373, in main
+    a.f(a)
+    ~~~^^^
+  File "/kaggle/working/gos/diagnostico.py", line 228, in cmd_agente
+    from minisweagent.agents.default import DefaultAgent
+ModuleNotFoundError: No module named 'minisweagent'
