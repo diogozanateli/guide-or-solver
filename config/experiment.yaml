@@ -24,8 +24,8 @@ validation:
   test_timeout_s: 900
 
 models:                        # cada modelo roda C1, C2 e C3 sobre o mesmo corpus
-  - name: "ollama/qwen2.5-coder:7b"
-  - name: "ollama/deepseek-coder-v2:16b"
+  - name: "ollama_chat/qwen2.5-coder:7b"
+  - name: "ollama_chat/deepseek-coder-v2:16b"
 
 generation:                    # parâmetros comuns a todos os modelos
   api_base: "http://localhost:11434"
