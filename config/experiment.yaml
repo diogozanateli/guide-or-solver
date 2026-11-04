@@ -29,7 +29,7 @@ models:                        # cada modelo roda C1, C2 e C3 sobre o mesmo corp
 
 generation:                    # parâmetros comuns a todos os modelos
   api_base: "http://localhost:11434"
-  temperature: 0.0
+  temperature: 0.3
   seed: 42
   num_ctx: 32768               # o Ollama trunca o contexto sem avisar se omitido
 
