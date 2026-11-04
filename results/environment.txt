@@ -1,7 +1,7 @@
-date: Tue Nov  3 12:17:35 PM UTC 2026
+date: Wed Nov  4 01:05:24 PM UTC 2026
 ollama: ollama version is 0.40.14
 NAME                     ID              SIZE      MODIFIED           
-deepseek-coder-v2:16b    63fb193b3a9b    8.9 GB    18 seconds ago        
+deepseek-coder-v2:16b    63fb193b3a9b    8.9 GB    19 seconds ago        
 qwen2.5-coder:7b         dae161e27b0e    4.7 GB    About a minute ago    
 == qwen2.5-coder:7b
   Model
@@ -53,7 +53,7 @@ Tesla T4, 15360 MiB, 580.178.04
 CPU(s):                                  4
 Model name:                              Intel(R) Xeon(R) CPU @ 2.00GHz
                total        used        free      shared  buff/cache   available
-Mem:            31Gi       1.6Gi       572Mi       1.3Mi        29Gi        29Gi
+Mem:            31Gi       1.5Gi       599Mi       1.3Mi        29Gi        29Gi
 PRETTY_NAME="Ubuntu 24.04.4 LTS"
 NAME="Ubuntu"
 Python 3.13.16
